@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
+/* ================================================
+   MINIMAL COOL MINT SAAS DESIGN SYSTEM
+   ================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- 3-Tier Contrast Hierarchy ---- */
+  --color-canvas: #d2dfdc;         /* Darker than Off-White Canvas behind TT */
+  --color-surface: #ffffff;        /* Crisp Pure White Cards */
+  --color-surface-subtle: #f0f4f3; /* Off-White Header & Stepper Surface */
+  --color-surface-hover: #c0d2ce;  /* Interactive Hover Surface */
+
+  /* ---- Cool Mint Palette ---- */
+  --color-mint-light: #ccfbf1;     /* Light Mint Ice */
+  --color-mint-badge: #99f6e4;
+  --color-accent: #0d9488;         /* Cool Mint Teal Accent */
+  --color-accent-dark: #0f766e;    /* Deep Cool Mint Dark Text */
+  --color-accent-light: #2dd4bf;
+
+  /* ---- Borders ---- */
+  --color-border: #b8ccc8;
+  --color-border-strong: #98b5b0;
+  --color-border-muted: #d2dfdc;
+
+  /* ---- Brand & Primary Accent ---- */
+  --color-accent-bg: #ccfbf1;
+  --color-accent-bg-hover: #99f6e4;
+
+  /* ---- Session Types (Cool Mint Theme) ---- */
+  --color-lecture: #3b82f6;        /* Clean Blue */
+  --color-lecture-bg: #eff6ff;
+  --color-lecture-border: #3b82f6;
+
+  --color-tutorial: #8b5cf6;       /* Clean Purple */
+  --color-tutorial-bg: #f5f3ff;
+  --color-tutorial-border: #8b5cf6;
+
+  --color-practical: #0d9488;      /* Cool Mint Teal */
+  --color-practical-bg: #e6f4f1;
+  --color-practical-border: #0d9488;
+
+  --color-fixed: #ef4444;          /* Clean Red */
+  --color-fixed-bg: #fef2f2;
+  --color-fixed-border: #ef4444;
+
+  /* ---- Typography ---- */
+  --color-text-heading: #0f172a;   /* Deep Slate Black */
+  --color-text-primary: #334155;   /* Charcoal Body */
+  --color-text-body: #475569;
+  --color-text-secondary: #64748b; /* Muted Slate Grey */
+  --color-text-muted: #94a3b8;
+
+  /* ---- Shadows & Depth ---- */
+  --shadow-xs: 0 1px 2px rgba(13, 148, 136, 0.04);
+  --shadow-sm: 0 2px 4px rgba(13, 148, 136, 0.05), 0 4px 12px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 10px rgba(13, 148, 136, 0.07), 0 12px 28px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 8px 20px rgba(13, 148, 136, 0.1), 0 24px 48px rgba(0, 0, 0, 0.04);
+  --shadow-accent: 0 4px 14px rgba(13, 148, 136, 0.35);
+
+  /* ---- Border Radius ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ---- Gradients ---- */
+  --gradient-accent: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-canvas);
+  --color-foreground: var(--color-text-primary);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============ Base Reset ============ */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-text-body);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============ Custom Scrollbar ============ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #d2dfdc;
+}
+::-webkit-scrollbar-thumb {
+  background: #b8ccc8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #98b5b0;
+}
+
+/* ============ Keyframe Animations ============ */
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+.animate-border-beam {
+  animation: border-beam 12s linear infinite;
 }

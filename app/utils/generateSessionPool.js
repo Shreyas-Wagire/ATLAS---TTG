@@ -39,8 +39,8 @@ export function generateSessionPool(yearWiseData, syncConstraints = []) {
 }
 
 function isSpecialGlobalCourse(course) {
-    const name = course.courseName || "";
-    const code = course.courseCode || "";
+    const name = course.courseName || course.name || "";
+    const code = course.courseCode || course.code || "";
 
     return (
         isAptitudeSubject(name) ||
@@ -52,11 +52,18 @@ function isSpecialGlobalCourse(course) {
     );
 }
 
+function getSubjectIdentifier(course) {
+    const code = (course.courseCode || course.code || "").trim();
+    const name = (course.courseName || course.name || "").trim();
+    return code || name || "Subject";
+}
+
 function createLecturesForDivision(sessionPool, year, course, division, syncConstraints) {
     const rawFaculty = course.divisions?.[division];
     if (!rawFaculty || String(rawFaculty).trim() === "") return;
     const faculty = String(rawFaculty).trim();
     const syncGroup = findSyncGroup(course, syncConstraints);
+    const subject = getSubjectIdentifier(course);
 
     // If an Aptitude/MILFL course is covered by global constraints for this year, skip creating normal pool lectures
     if (isSpecialGlobalCourse(course)) {
@@ -68,8 +75,8 @@ function createLecturesForDivision(sessionPool, year, course, division, syncCons
         sessionPool.push({
             year,
             division,
-            subject: course.courseCode,
-            subjectName: course.courseName,
+            subject,
+            subjectName: course.courseName || subject,
             faculty,
             location: course.location || "",
             type: "LECTURE",
@@ -88,6 +95,7 @@ function createTutorialSessionsForBatches(sessionPool, year, course, syncConstra
     const maxBatches = year === "BTECH" ? 8 : 12;
     const syncGroup = findSyncGroup(course, syncConstraints);
     const hasBatchCols = hasAnyBatchFaculty(course);
+    const subject = getSubjectIdentifier(course);
 
     for (let b = 1; b <= maxBatches; b++) {
         const division = getDivisionForBatch(b);
@@ -108,8 +116,8 @@ function createTutorialSessionsForBatches(sessionPool, year, course, syncConstra
                 year,
                 division,
                 batch: batchLabel,
-                subject: course.courseCode,
-                subjectName: course.courseName,
+                subject,
+                subjectName: course.courseName || subject,
                 faculty,
                 location: course.location || "",
                 type: "TUTORIAL",
@@ -129,6 +137,7 @@ function createPracticalSessionsForBatches(sessionPool, year, course, syncConstr
     const maxBatches = year === "BTECH" ? 8 : 12;
     const syncGroup = findSyncGroup(course, syncConstraints);
     const hasBatchCols = hasAnyBatchFaculty(course);
+    const subject = getSubjectIdentifier(course);
 
     for (let b = 1; b <= maxBatches; b++) {
         const division = getDivisionForBatch(b);
@@ -148,8 +157,8 @@ function createPracticalSessionsForBatches(sessionPool, year, course, syncConstr
             year,
             division,
             batch: batchLabel,
-            subject: course.courseCode,
-            subjectName: course.courseName,
+            subject,
+            subjectName: course.courseName || subject,
             faculty,
             location: course.location || "",
             type: "PRACTICAL",
@@ -170,8 +179,8 @@ function hasAnyBatchFaculty(course) {
 
 function findSyncGroup(course, syncConstraints) {
     if (!syncConstraints || syncConstraints.length === 0) return null;
-    const targetName = (course.courseName || "").toUpperCase().trim();
-    const targetCode = (course.courseCode || "").toUpperCase().trim();
+    const targetName = (course.courseName || course.name || "").toUpperCase().trim();
+    const targetCode = (course.courseCode || course.code || "").toUpperCase().trim();
 
     for (const group of syncConstraints) {
         const uppercaseCourses = (group.courses || []).map((c) => c.toUpperCase().trim());

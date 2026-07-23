@@ -24,6 +24,7 @@ export function generateSmartTimetable(
     let bestReport = null;
     let bestPenalty = Infinity;
     let bestConflictReport = null;
+    let bestSessionPool = null;
 
     for (let trial = 1; trial <= maxTrials; trial++) {
         const clonedGroupedData = JSON.parse(JSON.stringify(groupedData));
@@ -80,6 +81,7 @@ export function generateSmartTimetable(
             bestTimetable = timetableObj;
             bestReport = report;
             bestConflictReport = conflictReport;
+            bestSessionPool = sessionPool;
         }
 
         if (penalty === 0) {
@@ -88,14 +90,14 @@ export function generateSmartTimetable(
         }
     }
 
-    // Build derived reports from best timetable
-    const sessionPool = (() => {
+    // Use winning trial session pool for downstream reports
+    const winningSessionPool = bestSessionPool || (() => {
         const cloned = JSON.parse(JSON.stringify(groupedData));
         applyConstraintCounts(cloned, globalConstraints);
         return generateSessionPool(cloned, syncRules);
     })();
 
-    const facultyWorkloadReport = generateFacultyWorkloadReport(bestTimetable, sessionPool);
+    const facultyWorkloadReport = generateFacultyWorkloadReport(bestTimetable, winningSessionPool);
     const resourceUtilizationReport = generateResourceUtilizationReport(bestTimetable, resources);
     const batchTimetable = generateBatchTimetable(bestTimetable);
     const facultyTimetable = generateFacultyTimetable(bestTimetable);

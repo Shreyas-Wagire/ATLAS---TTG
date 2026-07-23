@@ -3,7 +3,7 @@
 import React from "react";
 import { 
     Sparkles, Cpu, ShieldCheck, Zap, Layers, ArrowRight, 
-    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, Award, BookOpen
+    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, Award, BookOpen, Beaker
 } from "lucide-react";
 import ShimmerButton from "./ui/ShimmerButton";
 
@@ -12,9 +12,9 @@ export default function HomePage({ onLaunchStudio }) {
         <div className="space-y-16 py-6 max-w-6xl mx-auto">
             {/* 1. HERO SECTION */}
             <section className="text-center space-y-6 pt-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-extrabold shadow-2xs">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>ATLAS Engine v2.4 Enterprise Edition</span>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold shadow-2xs">
+                    <Beaker className="w-3.5 h-3.5 text-amber-600" />
+                    <span>ATLAS Engine v2.4 • BETA TESTING BUILD</span>
                 </div>
 
                 <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0f172a] tracking-tight leading-tight max-w-4xl mx-auto">
@@ -22,7 +22,7 @@ export default function HomePage({ onLaunchStudio }) {
                 </h1>
 
                 <p className="text-sm sm:text-base text-[#64748b] max-w-2xl mx-auto font-medium leading-relaxed">
-                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm</strong> (Adaptive Timetable and Learning Allocation System). Eliminates schedule conflicts with 2D matrix visualization and dynamic elective synchronization.
+                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm</strong> (Adaptive Timetable and Learning Allocation System). Currently in active Beta Testing for department schedule optimization.
                 </p>
 
                 <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -31,7 +31,7 @@ export default function HomePage({ onLaunchStudio }) {
                         variant="primary"
                         className="py-3 px-7 text-xs sm:text-sm font-extrabold"
                     >
-                        <span>Launch Timetable Studio</span>
+                        <span>Launch Timetable Studio (Beta)</span>
                         <ArrowRight className="w-4 h-4" />
                     </ShimmerButton>
 
@@ -334,7 +334,7 @@ export default function HomePage({ onLaunchStudio }) {
                     Ready to Generate Your Department Timetable with ATLAS?
                 </h3>
                 <p className="text-xs sm:text-sm text-[#64748b] max-w-md mx-auto font-medium">
-                    Upload your course load workbook and let the ATLAS engine solve constraints in seconds.
+                    Upload your course load workbook and let the ATLAS engine solve constraints in seconds during this Beta Testing phase.
                 </p>
 
                 <div className="pt-2">
@@ -343,7 +343,7 @@ export default function HomePage({ onLaunchStudio }) {
                         variant="primary"
                         className="py-3 px-8 text-xs sm:text-sm font-extrabold"
                     >
-                        <span>Launch Timetable Studio Now</span>
+                        <span>Launch Timetable Studio Now (Beta)</span>
                         <ArrowRight className="w-4 h-4" />
                     </ShimmerButton>
                 </div>

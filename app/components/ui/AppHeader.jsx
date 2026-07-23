@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Sparkles, RefreshCw, Home, Layers, Check } from 'lucide-react';
+import { Calendar, Sparkles, RefreshCw, Home, Layers, Check, Beaker } from 'lucide-react';
 import ExportButton from '../ExportButton.jsx';
 import ShimmerButton from './ShimmerButton.jsx';
 
@@ -31,14 +31,20 @@ export default function AppHeader({
     <header className="sticky top-0 z-50 bg-[#f5f7f6]/95 backdrop-blur-md border-b border-[#b8ccc8] shadow-xs min-h-14 flex items-center py-2">
       <div className="max-w-[1520px] w-full mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-3">
         {/* Left: Brand Identity & View Switcher */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onViewChange('home')}>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onViewChange('home')}>
             <div className="w-8 h-8 rounded-lg bg-[#0d9488] flex items-center justify-center text-white shadow-xs font-bold shrink-0">
               <Calendar className="w-4 h-4" />
             </div>
-            <span className="font-extrabold text-sm text-[#0f172a] tracking-tight whitespace-nowrap">
-              Chronos Engine
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm text-[#0f172a] tracking-tight whitespace-nowrap">
+                ATLAS Engine v2.4
+              </span>
+              <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs">
+                <Beaker className="w-3 h-3 text-amber-600" />
+                <span>BETA TESTING</span>
+              </span>
+            </div>
           </div>
 
           {/* Navigation Mode Switcher Pills */}

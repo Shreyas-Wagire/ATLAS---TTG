@@ -14,12 +14,12 @@ export default function TimetableGrid({ timetable, timetableObj }) {
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const slots = [
-        "9:15 - 10:15",
-        "10:15 - 11:15",
-        "11:30 - 12:30",
-        "12:30 - 1:30",
-        "2:15 - 3:15",
-        "3:15 - 4:15",
+        "9.15 - 10.15 AM",
+        "10.15 - 11.15 AM",
+        "11.30 - 12.30 PM",
+        "12.30 - 1.30 PM",
+        "2.15 - 3.15 PM",
+        "3.15 - 4.15 PM",
     ];
 
     const availableClasses = Object.keys(activeTimetable);
@@ -84,7 +84,6 @@ export default function TimetableGrid({ timetable, timetableObj }) {
             {/* Searchable Dropdown & Color Legend */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#EBF4F2] border border-[#D3E6E2]">
                 <div className="flex flex-wrap items-center gap-3">
-                    {/* Search Input Box */}
                     <div className="relative flex items-center min-w-[220px]">
                         <Search className="w-3.5 h-3.5 absolute left-3 text-[#64748B] pointer-events-none" />
                         <input
@@ -96,7 +95,6 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                         />
                     </div>
 
-                    {/* Dropdown Select Control */}
                     <div className="relative flex items-center">
                         <select
                             value={selectedClass}
@@ -129,7 +127,7 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                         Normal
                     </span>
                     <span className="px-2 py-0.5 rounded bg-[#E6F4F1] text-[#0F766E] border border-teal-200">
-                        Lab
+                        Lab (Merged 2-Slot)
                     </span>
                     <span className="px-2 py-0.5 rounded bg-[#F3E8FF] text-[#5B21B6] border border-purple-200">
                         Tut
@@ -161,14 +159,17 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="w-full border-collapse table-fixed min-w-[750px] text-xs">
+                            <table className="w-full border-collapse table-fixed min-w-[850px] text-xs">
                                 <thead>
                                     <tr className="bg-[#EBF4F2]/70 text-[#64748B] border-b border-[#D3E6E2]">
                                         <th className="py-2 px-2 font-bold text-left w-24 border-r border-[#D3E6E2]">
                                             Slot
                                         </th>
+                                        <th className="py-2 px-2 font-bold text-center border-r border-[#D3E6E2] w-24">
+                                            Division
+                                        </th>
                                         {days.map((day) => (
-                                            <th key={day} className="py-2 px-2 font-bold text-center border-r border-[#D3E6E2] last:border-r-0 w-[18.4%]">
+                                            <th key={day} className="py-2 px-2 font-bold text-center border-r border-[#D3E6E2] last:border-r-0 w-[16.5%]">
                                                 {day}
                                             </th>
                                         ))}
@@ -178,9 +179,18 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                     {slots.map((slotTime, slotIndex) => (
                                         <React.Fragment key={slotIndex}>
                                             <tr>
-                                                <td className="py-1.5 px-2 font-bold text-[#64748B] bg-[#EBF4F2]/30 border-r border-[#D3E6E2] whitespace-nowrap text-[10.5px]">
+                                                <td className="py-2 px-2 font-bold text-[#64748B] bg-[#EBF4F2]/30 border-r border-[#D3E6E2] whitespace-nowrap text-[10.5px]">
                                                     {slotTime}
                                                 </td>
+
+                                                {slotIndex === 0 && (
+                                                    <td
+                                                        rowSpan={8}
+                                                        className="p-2 border-r border-[#D3E6E2] bg-[#EBF4F2]/40 font-extrabold text-[#0F172A] align-middle text-center text-xs"
+                                                    >
+                                                        {divisionKey}
+                                                    </td>
+                                                )}
 
                                                 {days.map((day) => {
                                                     const session = divisionTable[day]?.[slotIndex];
@@ -189,22 +199,20 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                                         return null;
                                                     }
 
-                                                    const rowSpan = session?.span ? session.span : 1;
+                                                    const isLab = session?.type === "PRACTICAL" || session?.type === "LAB";
+                                                    const rowSpan = isLab || session?.span === 2 ? 2 : 1;
                                                     const cellStyle = getSessionCellStyle(session);
 
                                                     return (
                                                         <td
                                                             key={day}
                                                             rowSpan={rowSpan}
-                                                            className={`p-2 border-r border-[#D3E6E2] last:border-r-0 align-middle text-center h-14 w-[18.4%] break-words whitespace-normal ${cellStyle}`}
+                                                            className={`p-2.5 border-r border-[#D3E6E2] last:border-r-0 align-middle text-center w-[16.5%] whitespace-normal break-words min-h-[56px] h-auto ${cellStyle}`}
                                                         >
                                                             {session ? (
-                                                                (session.type === "PRACTICAL" || session.type === "TUTORIAL") &&
-                                                                session.batchAllocations &&
-                                                                session.batchAllocations.length > 0 ? (
-                                                                    <div className="space-y-1 text-center">
+                                                                isLab && session.batchAllocations && session.batchAllocations.length > 0 ? (
+                                                                    <div className="space-y-1.5 text-center font-semibold">
                                                                         {(() => {
-                                                                            const isTutorial = session.type === "TUTORIAL";
                                                                             const groupsMap = {};
                                                                             session.batchAllocations.forEach((alloc) => {
                                                                                 const key = `${alloc.subject || session.subject}_${alloc.faculty || session.faculty}_${alloc.location || ""}`;
@@ -216,8 +224,8 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                                                                 const batchLabels = allocGroup.map((a) => a.batch).join(",");
                                                                                 const first = allocGroup[0];
                                                                                 return (
-                                                                                    <div key={idx} className="text-[10.5px] font-bold leading-snug text-center border-b border-[#D3E6E2]/40 last:border-b-0 pb-0.5 last:pb-0">
-                                                                                        <span className="font-extrabold">{highlightText(batchLabels, activeHighlightQuery)}</span> / {highlightText(first.subject, activeHighlightQuery)} / {highlightText(first.faculty, activeHighlightQuery)} / {highlightText(first.location || (isTutorial ? "CR2" : "LAB"), activeHighlightQuery)}
+                                                                                    <div key={idx} className="text-[10.5px] font-bold leading-snug text-center border-b border-[#D3E6E2]/40 last:border-b-0 pb-1 last:pb-0">
+                                                                                        <span className="font-extrabold">{highlightText(batchLabels, activeHighlightQuery)}</span> {highlightText(first.subject, activeHighlightQuery)} {highlightText(first.faculty, activeHighlightQuery)} {highlightText(first.location || "LAB", activeHighlightQuery)}
                                                                                     </div>
                                                                                 );
                                                                             });
@@ -225,7 +233,7 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                                                     </div>
                                                                 ) : (
                                                                     <div className="text-[10.5px] font-bold leading-snug text-center">
-                                                                        {highlightText(session.subject, activeHighlightQuery)} / {highlightText(session.faculty || "Prof", activeHighlightQuery)} / {highlightText(session.location || "CR3", activeHighlightQuery)}
+                                                                        {highlightText(session.subject, activeHighlightQuery)}/{highlightText(session.faculty || "Prof", activeHighlightQuery)}/{highlightText(session.location || "CR3", activeHighlightQuery)}
                                                                     </div>
                                                                 )
                                                             ) : (
@@ -238,24 +246,20 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                                 })}
                                             </tr>
 
+                                            {/* Full Row Merged Short Recess */}
                                             {slotIndex === 1 && (
                                                 <tr className="bg-amber-50 text-amber-900 font-bold border-y border-amber-200">
-                                                    <td className="py-0.5 px-2 text-center text-[9.5px] bg-amber-100/60 border-r border-amber-200">
-                                                        11:15 - 11:30
-                                                    </td>
-                                                    <td colSpan={5} className="py-0.5 text-center text-[10px] tracking-wider uppercase">
-                                                        ☕ SHORT BREAK
+                                                    <td colSpan={7} className="py-1.5 px-4 text-center text-xs tracking-widest uppercase font-extrabold bg-amber-100/70">
+                                                        ☕ SHORT RECESS (11.15 - 11.30 AM)
                                                     </td>
                                                 </tr>
                                             )}
 
+                                            {/* Full Row Merged Long Recess */}
                                             {slotIndex === 3 && (
                                                 <tr className="bg-amber-50 text-amber-900 font-bold border-y border-amber-200">
-                                                    <td className="py-0.5 px-2 text-center text-[9.5px] bg-amber-100/60 border-r border-amber-200">
-                                                        1:30 - 2:15
-                                                    </td>
-                                                    <td colSpan={5} className="py-0.5 text-center text-[10px] tracking-wider uppercase">
-                                                        🍽 LUNCH BREAK
+                                                    <td colSpan={7} className="py-1.5 px-4 text-center text-xs tracking-widest uppercase font-extrabold bg-amber-100/70">
+                                                        🍽 LONG RECESS (1.30 - 2.15 PM)
                                                     </td>
                                                 </tr>
                                             )}

@@ -1,12 +1,12 @@
 import * as XLSX from "xlsx";
 
 const SLOT_TIMES = [
-    "9:15 - 10:15",
-    "10:15 - 11:15",
-    "11:30 - 12:30",
-    "12:30 - 1:30",
-    "2:15 - 3:15",
-    "3:15 - 4:15",
+    "9.15 - 10.15 AM",
+    "10.15 - 11.15 AM",
+    "11.30 - 12.30 PM",
+    "12.30 - 1.30 PM",
+    "2.15 - 3.15 PM",
+    "3.15 - 4.15 PM",
 ];
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -25,38 +25,86 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
             validationScore
         } = extraReports;
 
-        // ─── Helper: build a grid sheet ───────────────────────────────────────────
-        function buildGridSheet(classData) {
-            const rows = [["Time Slot", ...DAYS]];
+        // ─── Helper: build a grid sheet matching official department format ───────
+        function buildGridSheet(classKey, classData) {
+            const rows = [["Time Slot", "Division", ...DAYS]];
+            const merges = [];
+
+            // Merged Division Column (Spans rows 1 to 8 in Excel)
+            merges.push({ s: { r: 1, c: 1 }, e: { r: 8, c: 1 } });
+
+            let currentRowIdx = 1; // 0-indexed row for AOA table: row 0 is header
 
             SLOT_TIMES.forEach((timeStr, slotIdx) => {
-                const row = [timeStr];
+                const row = [timeStr, classKey];
+
                 DAYS.forEach((day) => {
                     const cell = classData[day]?.[slotIdx];
                     if (!cell) { row.push("-"); return; }
-                    if (cell.span === 0) { row.push("↑ cont."); return; }
 
-                    if ((cell.type === "PRACTICAL" || cell.type === "TUTORIAL") && cell.batchAllocations?.length > 0) {
+                    if (cell.span === 0) {
+                        row.push(""); // Spanned cell content handled in top cell merge
+                        return;
+                    }
+
+                    const isLab = cell.type === "PRACTICAL" || cell.type === "LAB" || cell.span === 2;
+
+                    if (isLab) {
+                        // Merge 2 consecutive rows in Excel
+                        const dayColIdx = DAYS.indexOf(day) + 2; // Col 0: Time, Col 1: Division, Col 2..6: Days
+                        const startR = currentRowIdx;
+                        const endR = currentRowIdx + 1;
+                        merges.push({ s: { r: startR, c: dayColIdx }, e: { r: endR, c: dayColIdx } });
+                    }
+
+                    if ((cell.type === "PRACTICAL" || cell.type === "LAB") && cell.batchAllocations?.length > 0) {
                         const lines = cell.batchAllocations.map(
-                            (a) => `${a.batch || ""} / ${a.subject || cell.subject || ""} / ${a.faculty || ""} / ${a.location || ""}`.trim()
+                            (a) => `${a.batch || ""} ${a.subject || cell.subject || ""} ${a.faculty || ""} ${a.location || ""}`.trim()
                         );
-                        row.push(lines.join(" \n "));
+                        row.push(lines.join("\n"));
                     } else {
-                        row.push(`${cell.subject || ""} / ${cell.faculty || ""} / ${cell.location || ""}`.trim());
+                        row.push(`${cell.subject || ""}/${cell.faculty || ""}/${cell.location || ""}`.trim());
                     }
                 });
-                rows.push(row);
 
-                if (slotIdx === 1) rows.push(["11:15 - 11:30", "SHORT BREAK", "SHORT BREAK", "SHORT BREAK", "SHORT BREAK", "SHORT BREAK"]);
-                if (slotIdx === 3) rows.push(["1:30 - 2:15", "LUNCH BREAK", "LUNCH BREAK", "LUNCH BREAK", "LUNCH BREAK", "LUNCH BREAK"]);
+                rows.push(row);
+                currentRowIdx++;
+
+                // Full-Row SHORT RECESS Merge (Spans Column 0 to Column 6: all 7 columns)
+                if (slotIdx === 1) {
+                    rows.push(["SHORT RECESS (11.15 - 11.30 AM)", "", "", "", "", "", ""]);
+                    merges.push({ s: { r: currentRowIdx, c: 0 }, e: { r: currentRowIdx, c: 6 } });
+                    currentRowIdx++;
+                }
+
+                // Full-Row LONG RECESS Merge (Spans Column 0 to Column 6: all 7 columns)
+                if (slotIdx === 3) {
+                    rows.push(["LONG RECESS (1.30 - 2.15 PM)", "", "", "", "", "", ""]);
+                    merges.push({ s: { r: currentRowIdx, c: 0 }, e: { r: currentRowIdx, c: 6 } });
+                    currentRowIdx++;
+                }
             });
 
-            return XLSX.utils.aoa_to_sheet(rows);
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws["!merges"] = merges;
+
+            // Set column widths
+            ws["!cols"] = [
+                { wch: 20 }, // Time Slot
+                { wch: 15 }, // Division
+                { wch: 25 }, // Monday
+                { wch: 25 }, // Tuesday
+                { wch: 25 }, // Wednesday
+                { wch: 25 }, // Thursday
+                { wch: 25 }, // Friday
+            ];
+
+            return ws;
         }
 
         // 1. Division Timetable Sheets (SY-A, SY-B, ..., BTECH-C)
         Object.entries(timetable).forEach(([classKey, daysMap]) => {
-            const ws = buildGridSheet(daysMap);
+            const ws = buildGridSheet(classKey, daysMap);
             XLSX.utils.book_append_sheet(workbook, ws, classKey);
         });
 
@@ -70,7 +118,7 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     DAYS.forEach((day) => {
                         const cell = facData[day]?.[slotIdx];
                         if (!cell || cell.span === 0) { row.push(cell?.span === 0 ? "↑" : "-"); return; }
-                        row.push(`${cell.batch || cell.classKey} / ${cell.subject} / ${cell.location || ""}`.trim());
+                        row.push(`${cell.batch || cell.classKey} ${cell.subject} ${cell.location || ""}`.trim());
                     });
                     sheetData.push(row);
                 });
@@ -90,7 +138,7 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     DAYS.forEach((day) => {
                         const cell = locData[day]?.[slotIdx];
                         if (!cell || cell.span === 0) { row.push(cell?.span === 0 ? "↑" : "-"); return; }
-                        row.push(`${cell.batch || cell.classKey} / ${cell.subject} / ${cell.faculty || ""}`.trim());
+                        row.push(`${cell.batch || cell.classKey} ${cell.subject} (${cell.faculty || ""})`.trim());
                     });
                     sheetData.push(row);
                 });
@@ -123,16 +171,6 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     r.location, r.type, r.usedSlots, r.totalSlots, `${r.utilizationPercent}%`, r.status,
                 ]),
             ];
-            if (resourceUtilizationReport.conflicts?.length > 0) {
-                rows.push([], ["ROOM CONFLICTS"]);
-                rows.push(["Room", "Day", "Slot", "Type", "Affected Classes"]);
-                resourceUtilizationReport.conflicts.forEach((c) => {
-                    rows.push([
-                        c.location, c.day, `Slot ${c.slot + 1}`, c.type,
-                        c.conflictingClasses.map((u) => `${u.divisionKey}(${u.subject})`).join(", "),
-                    ]);
-                });
-            }
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Resource Utilization");
         }
 
@@ -151,7 +189,6 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     c.description, c.suggestion,
                 ]),
             ];
-            if ((conflictReport.conflicts || []).length === 0) rows.push(["No conflicts detected!", "", "", "", "", ""]);
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Conflict Report");
         }
 
@@ -171,29 +208,6 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                 ["Break Violation Free", breakdown?.breakViolation?.score || 10, 10, `${breakdown?.breakViolation?.violations || 0} violation(s)`],
             ];
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Validation Score");
-        }
-
-        // 8. Generation Report Summary Sheet
-        if (report?.summary) {
-            const { summary, missingLectures = [], missingTutorials = [], missingPracticals = [] } = report;
-            const rows = [
-                ["TIMETABLE GENERATION SUMMARY"],
-                [],
-                ["Type", "Required", "Allocated", "Missing"],
-                ["Lectures", summary.lecture.required, summary.lecture.allocated, summary.lecture.required - summary.lecture.allocated],
-                ["Tutorials", summary.tutorial.required, summary.tutorial.allocated, summary.tutorial.required - summary.tutorial.allocated],
-                ["Practicals", summary.practical.required, summary.practical.allocated, summary.practical.required - summary.practical.allocated],
-                [],
-                ["UNALLOCATED SESSIONS"],
-                ["Type", "Year", "Division", "Subject", "Faculty", "Batch"],
-                ...[...missingLectures, ...missingTutorials, ...missingPracticals].map((s) => [
-                    s.type, s.year, s.division, s.subject, s.faculty, s.batch || "Division",
-                ]),
-            ];
-            if (missingLectures.length + missingTutorials.length + missingPracticals.length === 0) {
-                rows.push(["✓ 100% sessions allocated!"]);
-            }
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Generation Report");
         }
 
         // Universal Browser Blob Download Triggers

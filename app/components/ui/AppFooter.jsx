@@ -14,9 +14,9 @@ export default function AppFooter() {
             All Systems Operational
           </span>
           <span className="text-[#b8ccc8]">•</span>
-          <span className="flex items-center gap-1">
-            <Cpu className="w-3 h-3 text-[#64748b]" />
-            Engine v2.4.0 Turbo
+          <span className="flex items-center gap-1 font-extrabold text-[#0f172a]">
+            <Cpu className="w-3.5 h-3.5 text-[#0d9488]" />
+            ATLAS Engine v2.4 Turbo
           </span>
         </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Globe, Plus, Check } from "lucide-react";
+import { Globe, Plus } from "lucide-react";
 
 export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) {
     const [year, setYear] = useState("");
@@ -40,33 +40,33 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
     };
 
     return (
-        <div className="rounded-2xl bg-[#111827] border border-slate-800 shadow-xl overflow-hidden">
-            <div className="px-6 py-4 bg-[#1a2236] border-b border-slate-800/80 flex items-center justify-between">
+        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-2xs overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
                         <Globe className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-slate-100">
+                        <h3 className="text-sm font-extrabold text-[#0f172a]">
                             Add Inter-Department & External Courses
                         </h3>
-                        <p className="text-[11px] text-slate-400 font-medium">
+                        <p className="text-[11px] text-[#64748b] font-medium">
                             Inject cross-faculty electives and external department load directly
                         </p>
                     </div>
                 </div>
             </div>
 
-            <form onSubmit={handleAddExternal} className="p-6 space-y-4">
+            <form onSubmit={handleAddExternal} className="p-4 sm:p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">
                             Target Academic Year
                         </label>
                         <select
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488]"
                         >
                             <option value="">Select Year...</option>
                             {yearsList.map((y) => (
@@ -76,7 +76,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">
                             Course Title
                         </label>
                         <input
@@ -84,12 +84,12 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Cyber Law & Ethics"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">
                             Assigned Faculty
                         </label>
                         <input
@@ -97,12 +97,12 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Prof. Mehta"
                             value={faculty}
                             onChange={(e) => setFaculty(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">
                             Assigned Location / Room
                         </label>
                         <input
@@ -110,37 +110,37 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Hall-B"
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
                         />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 max-w-md">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-md">
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Lectures/Wk</label>
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">Lectures/Wk</label>
                         <input
                             type="number"
                             value={lectures}
                             onChange={(e) => setLectures(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a]"
                         />
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Tutorials/Wk</label>
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">Tutorials/Wk</label>
                         <input
                             type="number"
                             value={tutorials}
                             onChange={(e) => setTutorials(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a]"
                         />
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Practicals/Wk</label>
+                        <label className="block text-[11px] font-bold text-[#64748b] mb-1">Practicals/Wk</label>
                         <input
                             type="number"
                             value={practicals}
                             onChange={(e) => setPracticals(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#202a44] border border-slate-700 text-xs text-slate-100"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a]"
                         />
                     </div>
                 </div>
@@ -148,7 +148,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                 <div className="flex justify-end pt-2">
                     <button
                         type="submit"
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Inject External Course</span>

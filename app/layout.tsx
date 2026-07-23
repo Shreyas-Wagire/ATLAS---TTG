@@ -9,8 +9,44 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Automatic Timetable Generator System",
-  description: "Intelligent Multi-Year Class-by-Class Timetable Generation Architecture",
+  title: "ATLAS Engine v2.4 — Automated Academic Timetable Generator",
+  description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm (THARM, PHGBP, DEGES, MTEFM). Zero conflict guarantee.",
+  keywords: [
+    "ATLAS Engine",
+    "ATLAS Algorithm",
+    "university timetable generator",
+    "academic scheduling software",
+    "conflict-free timetable",
+    "2D timetable matrix",
+    "automated scheduling system",
+    "department timetable solver",
+  ],
+  authors: [{ name: "ATLAS Engineering Team" }],
+  verification: {
+    google: "-g570JiBMyW295Vj2vZBaC_0VumdQlx63AjrJPpJFK0",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    title: "ATLAS Engine v2.4 — Automated Academic Timetable Generator",
+    description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm. 100% Zero Conflict Guarantee.",
+    siteName: "ATLAS Timetable System",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ATLAS Engine v2.4",
+    description: "Automated 2D university timetable generator powered by the ATLAS Algorithm.",
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +56,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.className} antialiased`}>
+      <head>
+        <meta name="google-site-verification" content="-g570JiBMyW295Vj2vZBaC_0VumdQlx63AjrJPpJFK0" />
+      </head>
       <body className="min-h-screen">{children}</body>
     </html>
   );

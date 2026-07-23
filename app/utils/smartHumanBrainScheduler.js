@@ -1,5 +1,3 @@
-import { isSubjectMatch } from "./normalizeSubjectName";
-
 export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 

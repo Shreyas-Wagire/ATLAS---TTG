@@ -137,6 +137,13 @@ export default function FileUpload() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Security Shield: Enforce 10MB maximum file size limit (DoS / Memory Exhaustion Protection)
+        const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert("Security Warning: File exceeds 10MB maximum size limit. Please upload a valid department workbook.");
+            return;
+        }
+
         const reader = new FileReader();
 
         reader.onload = (event) => {

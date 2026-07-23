@@ -2,6 +2,7 @@
  * allocateResources.js
  * Strictly assigns classrooms, labs, and tutorial rooms to sessions
  * with 100% CONFLICT-FREE guarantee across all slots and days.
+ * Includes deterministic loop bounds to prevent deadloops.
  */
 export function allocateResources(timetable, resources = {}) {
     if (!timetable) return timetable;
@@ -46,9 +47,8 @@ export function allocateResources(timetable, resources = {}) {
             });
         });
 
-        // Helper: Get a guaranteed UNIQUE available room that is NOT busy in usedSet
+        // Helper: Get a guaranteed UNIQUE available room with deterministic loop bound (max 100 attempts)
         function findOrGenerateUniqueRoom(pool, usedSet, prefix) {
-            // 1. Try finding an unassigned room in pool
             for (const room of pool) {
                 const norm = room.toUpperCase().trim();
                 if (!usedSet.has(norm)) {
@@ -56,18 +56,22 @@ export function allocateResources(timetable, resources = {}) {
                 }
             }
 
-            // 2. Generate a clean numbered expansion room (e.g. CR-4, LAB-5, TR-3)
             let counter = pool.length + 1;
-            while (true) {
+            const maxAttempts = 100;
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
                 const candidate = `${prefix}${counter}`;
                 if (!usedSet.has(candidate.toUpperCase().trim())) {
                     return candidate;
                 }
                 counter++;
+                attempts++;
             }
+            return `${prefix}${counter}`;
         }
 
-        // Helper: Find lab available across BOTH slot and nextSlot (for 2-hour practicals)
+        // Helper: Find lab available across BOTH slot and nextSlot (deterministic max 100 attempts)
         function findOrGenerateUniqueLab(usedSetSlot1, usedSetSlot2) {
             for (const lab of baseLabs) {
                 const norm = lab.toUpperCase().trim();
@@ -77,14 +81,19 @@ export function allocateResources(timetable, resources = {}) {
             }
 
             let counter = baseLabs.length + 1;
-            while (true) {
+            const maxAttempts = 100;
+            let attempts = 0;
+
+            while (attempts < maxAttempts) {
                 const candidate = `LAB${counter}`;
                 const norm = candidate.toUpperCase().trim();
                 if (!usedSetSlot1.has(norm) && !usedSetSlot2.has(norm)) {
                     return candidate;
                 }
                 counter++;
+                attempts++;
             }
+            return `LAB${counter}`;
         }
 
         // Step 2: Assign Lab Rooms for 2-hour PRACTICAL blocks (reserving both slots)

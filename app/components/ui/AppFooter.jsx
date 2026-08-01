@@ -16,7 +16,8 @@ export default function AppFooter() {
           <span className="text-[#b8ccc8]">•</span>
           <span className="flex items-center gap-1 font-extrabold text-[#0f172a]">
             <Cpu className="w-3.5 h-3.5 text-[#0d9488]" />
-            ATLAS Engine v2.4 Turbo
+            ATLAS Engine v3.4 Turbo
+
           </span>
         </div>
 

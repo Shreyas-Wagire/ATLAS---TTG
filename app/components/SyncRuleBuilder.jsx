@@ -131,8 +131,9 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
                                 className="p-4 rounded-xl bg-white border border-[#b8ccc8] flex items-center justify-between gap-4 shadow-2xs"
                             >
                                 <div>
-                                    <h5 className="text-xs font-extrabold text-[#0f766e] mb-1">
-                                        ⚡ {rule.groupName}
+                                    <h5 className="text-xs font-extrabold text-[#0f766e] mb-1 flex items-center gap-1">
+                                        <Zap className="w-3.5 h-3.5 text-[#0d9488]" />
+                                        <span>{rule.groupName}</span>
                                     </h5>
                                     <div className="flex flex-wrap gap-1.5">
                                         {rule.courses.map((c, i) => (

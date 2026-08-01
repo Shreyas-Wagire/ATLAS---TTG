@@ -28,7 +28,15 @@ export default function AnimatedTabs({
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
-            {tab.icon && <span className="text-sm">{tab.icon}</span>}
+            {tab.icon && (
+              React.isValidElement(tab.icon) ? (
+                tab.icon
+              ) : typeof tab.icon === 'function' || (typeof tab.icon === 'object' && tab.icon?.$$typeof) ? (
+                <tab.icon className="w-3.5 h-3.5" />
+              ) : typeof tab.icon === 'string' ? (
+                <span className="text-sm">{tab.icon}</span>
+              ) : null
+            )}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span

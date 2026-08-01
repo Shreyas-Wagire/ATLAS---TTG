@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { Download } from "lucide-react";
 import { exportTimetable } from "../utils/exportTimetable";
+import ShimmerButton from "./ui/ShimmerButton";
 
 export default function ExportButton({
     timetable,
@@ -13,8 +15,6 @@ export default function ExportButton({
     locationTimetable,
     validationScore
 }) {
-    const [isHovered, setIsHovered] = useState(false);
-
     const handleExport = () => {
         exportTimetable(timetable, report, {
             conflictReport,
@@ -27,28 +27,13 @@ export default function ExportButton({
     };
 
     return (
-        <button
+        <ShimmerButton
             onClick={handleExport}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            style={{
-                background: "var(--gradient-success)",
-                color: "#ffffff",
-                padding: "10px 24px",
-                borderRadius: "var(--radius-md)",
-                fontWeight: "600",
-                fontSize: "0.9rem",
-                boxShadow: "var(--shadow-success)",
-                border: "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                transform: isHovered ? "scale(1.02)" : "scale(1)"
-            }}
+            variant="success"
+            className="py-1.5 px-4 text-xs font-extrabold"
         >
-            📥 Export Full Report (XLSX)
-        </button>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Full Report (XLSX)</span>
+        </ShimmerButton>
     );
 }

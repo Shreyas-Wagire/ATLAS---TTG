@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ATLAS Engine v2.4 — Automated Academic Timetable Generator",
+  title: "ATLAS Engine v3.4 — Automated Academic Timetable Generator",
   description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm (THARM, PHGBP, DEGES, MTEFM). Zero conflict guarantee.",
   keywords: [
     "ATLAS Engine",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "ATLAS Engine v2.4 — Automated Academic Timetable Generator",
+    title: "ATLAS Engine v3.4 — Automated Academic Timetable Generator",
     description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm. 100% Zero Conflict Guarantee.",
     siteName: "ATLAS Timetable System",
     locale: "en_US",
@@ -44,9 +44,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ATLAS Engine v2.4",
+    title: "ATLAS Engine v3.4",
     description: "Automated 2D university timetable generator powered by the ATLAS Algorithm.",
   },
+
 };
 
 export default function RootLayout({

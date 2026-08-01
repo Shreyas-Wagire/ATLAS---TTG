@@ -24,11 +24,15 @@ export function parseLoadSheet(rows) {
             return;
         }
 
-        // Subject row
+        // Subject row: col0 is a course name, col1 is a numeric L value (> 0 or explicitly 0)
+        // Skip rows where col1 is empty or non-numeric text like "L", "T", "P"
+        const col1Str = String(col1 ?? "").trim();
         if (
             col0 &&
-            !isNaN(Number(col1))
+            col1Str !== "" &&
+            !isNaN(Number(col1Str))
         ) {
+
             const facultyA =
                 String(row[4] || "").trim();
 
@@ -41,11 +45,10 @@ export function parseLoadSheet(rows) {
             const maxBatches = currentYear === "BTECH" ? 8 : 12;
             const batches = {};
             for (let b = 1; b <= maxBatches; b++) {
-                const candidate1 = String(row[6 + b] || "").trim();
-                const candidate2 = String(row[7 + b] || "").trim();
-                const candidate3 = String(row[8 + b] || "").trim();
-                const batchFaculty = candidate1 || candidate2 || candidate3;
-                if (batchFaculty) {
+                // Batch faculty columns start right after the 3 division columns (cols 4,5,6).
+                // Batch 1 → col 7, Batch 2 → col 8, ..., Batch N → col (6 + N)
+                const batchFaculty = String(row[6 + b] || "").trim();
+                if (batchFaculty && batchFaculty !== "-") {
                     batches[b] = batchFaculty;
                 }
             }

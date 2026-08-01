@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, Coffee, Utensils } from "lucide-react";
 
 export default function TimetableGrid({ timetable, timetableObj }) {
     const activeTimetable = timetable || timetableObj;
@@ -250,7 +250,10 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                             {slotIndex === 1 && (
                                                 <tr className="bg-amber-50 text-amber-900 font-bold border-y border-amber-200">
                                                     <td colSpan={7} className="py-1.5 px-4 text-center text-xs tracking-widest uppercase font-extrabold bg-amber-100/70">
-                                                        ☕ SHORT RECESS (11.15 - 11.30 AM)
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <Coffee className="w-3.5 h-3.5 text-amber-800" />
+                                                            <span>SHORT RECESS (11.15 - 11.30 AM)</span>
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             )}
@@ -259,7 +262,10 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                                             {slotIndex === 3 && (
                                                 <tr className="bg-amber-50 text-amber-900 font-bold border-y border-amber-200">
                                                     <td colSpan={7} className="py-1.5 px-4 text-center text-xs tracking-widest uppercase font-extrabold bg-amber-100/70">
-                                                        🍽 LONG RECESS (1.30 - 2.15 PM)
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <Utensils className="w-3.5 h-3.5 text-amber-800" />
+                                                            <span>LONG RECESS (1.30 - 2.15 PM)</span>
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             )}

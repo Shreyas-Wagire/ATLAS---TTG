@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
     Upload, Sliders, PlayCircle, Grid, BarChart3, ChevronRight, ChevronLeft, 
     Sparkles, CheckCircle2, FileSpreadsheet, Layers, ShieldCheck, Zap, 
-    BookOpen, Users, MapPin
+    BookOpen, Users, MapPin, Globe, Link2, UserCheck, GraduationCap, Building2, Loader2
 } from "lucide-react";
 
 import { parseGlobalConstraints } from "../utils/parseGlobalConstraints";
@@ -14,6 +14,7 @@ import { parseResourcesSheet } from "../utils/parseResourcesSheet";
 import { parseLoadSheet } from "../utils/parseLoadSheet";
 import { buildYearWiseData } from "../utils/buildYearWiseData";
 import { parseSyncConstraints, autoDetectSyncConstraints } from "../utils/parseSyncConstraints";
+import { parseFacultyConstraints } from "../utils/parseFacultyConstraints";
 import { generateSmartTimetable } from "../utils/generateSmartTimetable";
 
 import HomePage from "./HomePage";
@@ -21,6 +22,7 @@ import YearWiseCourses from "./YearWiseCourses";
 import GlobalConstraints from "./GlobalConstraints";
 import ExternalCourses from "./ExternalCourses";
 import SyncRuleBuilder from "./SyncRuleBuilder";
+import FacultyConstraints from "./FacultyConstraints";
 import TimetableGrid from "./TimetableGrid";
 import GenerationReport from "./GenerationReport";
 import FacultyTimetableGrid from "./FacultyTimetableGrid";
@@ -34,9 +36,12 @@ import BorderBeam from "./ui/BorderBeam";
 import AnimatedTabs from "./ui/AnimatedTabs";
 import AppHeader from "./ui/AppHeader";
 import AppFooter from "./ui/AppFooter";
+import SemesterDashboard from "./SemesterDashboard";
+import { saveSemester } from "../utils/semesterStore";
 
 export default function FileUpload() {
-    const [activeView, setActiveView] = useState("home"); // 'home' | 'studio'
+    const [activeView, setActiveView] = useState("home"); // 'semesters' | 'home' | 'studio'
+    const [activeSemester, setActiveSemester] = useState(null); // current semester object
     const [sheets, setSheets] = useState({});
     const [selectedSheet, setSelectedSheet] = useState("");
     const [detectedSheets, setDetectedSheets] = useState({
@@ -65,6 +70,8 @@ export default function FileUpload() {
     const [facultyTimetable, setFacultyTimetable] = useState(null);
     const [locationTimetable, setLocationTimetable] = useState(null);
     const [validationScore, setValidationScore] = useState(null);
+    const [optimizationReport, setOptimizationReport] = useState(null);
+    const [facultyConstraints, setFacultyConstraints] = useState([]);
 
     // Multi-Step Stage State
     const [activeStep, setActiveStep] = useState(1);
@@ -96,7 +103,43 @@ export default function FileUpload() {
         setFacultyTimetable(null);
         setLocationTimetable(null);
         setValidationScore(null);
+        setOptimizationReport(null);
+        setFacultyConstraints([]);
         setActiveStep(1);
+    };
+
+    // -----------------------------------------------
+    // SEMESTER MANAGEMENT HANDLERS
+    // -----------------------------------------------
+    const handleEnterSemester = (semester) => {
+        setActiveSemester(semester);
+        // If semester has existing timetable, restore it
+        if (semester.timetable) {
+            setTimetable(semester.timetable);
+            setGenerationReport(semester.report || null);
+            setConflictReport(semester.conflictReport || null);
+            setFacultyWorkloadReport(semester.facultyWorkloadReport || null);
+            setResourceUtilizationReport(semester.resourceUtilizationReport || null);
+            setFacultyTimetable(semester.facultyTimetable || null);
+            setLocationTimetable(semester.locationTimetable || null);
+            setValidationScore(semester.validationScore || null);
+            setOptimizationReport(semester.optimizationReport || null);
+            setYearWiseData(semester.yearWiseData || {});
+            setGlobalConstraints(semester.globalConstraints || []);
+            setSyncRules(semester.syncRules || []);
+            setResources(semester.resources || { classrooms: [], labs: [], tutorialRooms: [] });
+            setFacultyConstraints(semester.facultyConstraints || []);
+            setActiveStep(semester.timetable ? 4 : 1);
+        } else {
+            handleReset();
+        }
+        setActiveView("studio");
+    };
+
+    const handleExitToSemesters = () => {
+        handleReset();
+        setActiveSemester(null);
+        setActiveView("semesters");
     };
 
     const runTimetableGeneration = (
@@ -110,12 +153,14 @@ export default function FileUpload() {
         setIsGenerating(true);
 
         setTimeout(() => {
+            const facultyAvailability = parseFacultyConstraints(facultyConstraints);
             const result = generateSmartTimetable(
                 targetGroupedData,
                 targetGlobalConstraints,
                 targetSyncRules,
                 targetResources,
-                30
+                30,
+                facultyAvailability
             );
 
             setGenerationReport(result.report);
@@ -126,9 +171,30 @@ export default function FileUpload() {
             setFacultyTimetable(result.facultyTimetable || null);
             setLocationTimetable(result.locationTimetable || null);
             setValidationScore(result.validationScore || null);
+            setOptimizationReport(result.optimizationReport || null);
+
+            // Auto-save to active semester workspace
+            if (activeSemester?.id) {
+                saveSemester(activeSemester.id, {
+                    timetable: result.timetable,
+                    report: result.report,
+                    conflictReport: result.conflictReport || null,
+                    facultyWorkloadReport: result.facultyWorkloadReport || null,
+                    resourceUtilizationReport: result.resourceUtilizationReport || null,
+                    facultyTimetable: result.facultyTimetable || null,
+                    locationTimetable: result.locationTimetable || null,
+                    validationScore: result.validationScore || null,
+                    optimizationReport: result.optimizationReport || null,
+                    yearWiseData: targetGroupedData,
+                    globalConstraints: targetGlobalConstraints,
+                    syncRules: targetSyncRules,
+                    resources: targetResources,
+                    facultyConstraints,
+                });
+            }
 
             setIsGenerating(false);
-            setActiveStep(4); // Advance to Scheduler Studio automatically
+            setActiveStep(4);
             setActiveView("studio");
         }, 500);
     };
@@ -218,17 +284,18 @@ export default function FileUpload() {
     };
 
     const configSubTabs = [
-        { id: "courses", label: "Course Load", icon: "📚", badge: stats.totalCourses },
-        { id: "constraints", label: "Global Constraints", icon: "⚡", badge: globalConstraints.length },
-        { id: "external", label: "External Courses", icon: "🌐" },
-        { id: "sync", label: "Sync Rules", icon: "🔗", badge: stats.syncRuleCount },
+        { id: "courses", label: "Course Load", icon: <BookOpen className="w-3.5 h-3.5" />, badge: stats.totalCourses },
+        { id: "constraints", label: "Global Constraints", icon: <Zap className="w-3.5 h-3.5" />, badge: globalConstraints.length },
+        { id: "external", label: "External Courses", icon: <Globe className="w-3.5 h-3.5" /> },
+        { id: "sync", label: "Sync Rules", icon: <Link2 className="w-3.5 h-3.5" />, badge: stats.syncRuleCount },
+        { id: "faculty_avail", label: "Faculty Availability", icon: <UserCheck className="w-3.5 h-3.5" />, badge: facultyConstraints.length },
     ];
 
     const studioSubTabs = [
-        { id: "division", label: "Division View", icon: "🎓" },
-        { id: "faculty", label: "Faculty View", icon: "👨‍🏫" },
-        { id: "location", label: "Location / Labs", icon: "🏫" },
-        { id: "batch", label: "Batch View", icon: "👥" },
+        { id: "division", label: "Division View", icon: <GraduationCap className="w-3.5 h-3.5" /> },
+        { id: "faculty", label: "Faculty View", icon: <UserCheck className="w-3.5 h-3.5" /> },
+        { id: "location", label: "Location / Labs", icon: <Building2 className="w-3.5 h-3.5" /> },
+        { id: "batch", label: "Batch View", icon: <Users className="w-3.5 h-3.5" /> },
     ];
 
     return (
@@ -247,6 +314,8 @@ export default function FileUpload() {
                 onGenerate={() => runTimetableGeneration()}
                 isGenerating={isGenerating}
                 timetable={timetable}
+                activeSemester={activeSemester}
+                onExitToSemesters={handleExitToSemesters}
             />
 
             {/* Main Content Area */}
@@ -261,7 +330,20 @@ export default function FileUpload() {
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <HomePage onLaunchStudio={() => setActiveView("studio")} />
+                            <HomePage onLaunchStudio={() => setActiveView("semesters")} />
+                        </motion.div>
+                    )}
+
+                    {/* VIEW 2: SEMESTER DASHBOARD (LOBBY) */}
+                    {activeView === "semesters" && (
+                        <motion.div
+                            key="semestersView"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <SemesterDashboard onEnterSemester={handleEnterSemester} />
                         </motion.div>
                     )}
 
@@ -275,6 +357,19 @@ export default function FileUpload() {
                             transition={{ duration: 0.2 }}
                             className="space-y-6"
                         >
+                            {/* Screen-level Back to Semesters Action */}
+                            {activeSemester && (
+                                <div className="flex items-center justify-between gap-3 pb-1 border-b border-[#b8ccc8]/30">
+                                    <button
+                                        onClick={handleExitToSemesters}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-[#0f766e] bg-[#ccfbf1]/80 hover:bg-[#ccfbf1] border border-[#99f6e4] rounded-xl transition-all shadow-2xs cursor-pointer"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                        <span>Back to Semesters</span>
+                                    </button>
+                                </div>
+                            )}
+
                             {/* STAGE 1: UPLOAD STATION */}
                             {activeStep === 1 && (
                                 <div className="max-w-2xl mx-auto py-4 space-y-5">
@@ -395,6 +490,12 @@ export default function FileUpload() {
                                             setSyncRules={setSyncRules}
                                         />
                                     )}
+                                    {configTab === "faculty_avail" && (
+                                        <FacultyConstraints
+                                            facultyConstraints={facultyConstraints}
+                                            setFacultyConstraints={setFacultyConstraints}
+                                        />
+                                    )}
 
                                     {/* Bottom Navigation Bar */}
                                     <div className="flex items-center justify-between border-t border-[#b8ccc8] pt-3.5">
@@ -462,7 +563,7 @@ export default function FileUpload() {
                                         >
                                             {isGenerating ? (
                                                 <>
-                                                    <span className="animate-spin text-sm">⚡</span>
+                                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                                                     <span>Running Generation Engine...</span>
                                                 </>
                                             ) : (
@@ -556,6 +657,7 @@ export default function FileUpload() {
                                         facultyWorkloadReport={facultyWorkloadReport}
                                         resourceUtilizationReport={resourceUtilizationReport}
                                         validationScore={validationScore}
+                                        optimizationReport={optimizationReport}
                                     />
                                 </div>
                             )}

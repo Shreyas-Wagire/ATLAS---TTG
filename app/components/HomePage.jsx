@@ -3,18 +3,36 @@
 import React from "react";
 import { 
     Sparkles, Cpu, ShieldCheck, Zap, Layers, ArrowRight, 
-    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, Award, BookOpen, Beaker
+    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, Award, BookOpen, Beaker, XCircle
 } from "lucide-react";
 import ShimmerButton from "./ui/ShimmerButton";
 
 export default function HomePage({ onLaunchStudio }) {
+    const [showChangelog, setShowChangelog] = React.useState(false);
+
     return (
-        <div className="space-y-16 py-6 max-w-6xl mx-auto">
+        <div className="space-y-16 py-6 max-w-6xl mx-auto relative">
             {/* 1. HERO SECTION */}
             <section className="text-center space-y-6 pt-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold shadow-2xs">
-                    <Beaker className="w-3.5 h-3.5 text-amber-600" />
-                    <span>ATLAS Engine v2.4 • BETA TESTING BUILD</span>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold shadow-2xs">
+                        <Beaker className="w-3.5 h-3.5 text-amber-600" />
+                        <span>ATLAS Engine v3.4 • RELEASE BUILD</span>
+                    </div>
+
+                    {/* Interactive Version v3.4 Changelog Pill */}
+                    <button
+                        onClick={() => setShowChangelog(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-extrabold shadow-2xs hover:scale-105 transition-transform cursor-pointer"
+                    >
+                        <Sparkles className="w-3.5 h-3.5 text-[#0d9488]" />
+                        <span>What's New in v3.4</span>
+                        <span className="px-1.5 py-0.2 rounded-md bg-[#0d9488] text-white text-[9px] font-black">CHANGELOG</span>
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-center pt-2">
+                    <img src="/atlas-logo-light.png" alt="ATLAS Logo" className="h-16 sm:h-22 w-auto object-contain mx-auto drop-shadow-sm" />
                 </div>
 
                 <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0f172a] tracking-tight leading-tight max-w-4xl mx-auto">
@@ -22,7 +40,7 @@ export default function HomePage({ onLaunchStudio }) {
                 </h1>
 
                 <p className="text-sm sm:text-base text-[#64748b] max-w-2xl mx-auto font-medium leading-relaxed">
-                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm</strong> (Adaptive Timetable and Learning Allocation System). Currently in active Beta Testing for department schedule optimization.
+                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm v3.4</strong> (Adaptive Timetable and Learning Allocation System). Real-time faculty occupancy solver, zero-conflict matrix scheduling, and multi-pass practical optimization.
                 </p>
 
                 <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -31,7 +49,7 @@ export default function HomePage({ onLaunchStudio }) {
                         variant="primary"
                         className="py-3 px-7 text-xs sm:text-sm font-extrabold"
                     >
-                        <span>Launch Timetable Studio (Beta)</span>
+                        <span>Launch Timetable Studio (v3.4)</span>
                         <ArrowRight className="w-4 h-4" />
                     </ShimmerButton>
 
@@ -43,6 +61,92 @@ export default function HomePage({ onLaunchStudio }) {
                     </a>
                 </div>
             </section>
+
+            {/* VERSION v3.4 CHANGELOG MODAL */}
+            {showChangelog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeInUp">
+                    <div className="bg-white rounded-2xl border border-[#b8ccc8] shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
+                        <div className="flex items-start justify-between gap-3 border-b border-[#b8ccc8]/40 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0d9488]">
+                                    <Sparkles className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-extrabold text-[#0f172a]">
+                                        ATLAS Engine v3.4 Changelog
+                                    </h3>
+                                    <p className="text-xs text-[#64748b] font-medium">
+                                        Release highlights and system architectural improvements
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowChangelog(false)}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 text-[#64748b] transition-colors cursor-pointer"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1 no-scrollbar text-xs">
+                            {/* Feature 1: Faculty Occupancy & Optimizer Engine */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Cpu className="w-4 h-4 text-[#0d9488]" />
+                                    1. In-Memory Faculty Occupancy & Optimizer Engine
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Scans all scheduled sessions during generation to create in-memory `facultyOccupancy` maps and `facultyStats`. Automatically resolves double-bookings, dampens consecutive lecture streaks, and executes 1-hop session moves & swaps with full compatibility checks.
+                                </p>
+                            </div>
+
+                            {/* Feature 2: Faculty Constraints & Time Availability */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Users className="w-4 h-4 text-[#0d9488]" />
+                                    2. Faculty Constraints & Time Availability Management
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Configurable per-faculty time availability rules, blocked slot preferences, maximum daily teaching load boundaries, and automatic conflict prevention during session allocation.
+                                </p>
+                            </div>
+
+                            {/* Feature 3: Semester Creation & Workspace Lifecycle */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <BookOpen className="w-4 h-4 text-[#0d9488]" />
+                                    3. Semester Workspace Creation & Lifecycle Controls
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Complete semester workspace creation system with full lifecycle status controls: transition seamlessly between Draft, Active, and Archived states, or permanently delete unwanted semester workspaces.
+                                </p>
+                            </div>
+
+                            {/* Feature 4: Subject-Group Practical Solver */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Layers className="w-4 h-4 text-[#0d9488]" />
+                                    4. Subject-Group-First Practical Allocation Solver
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Multi-pass practical solver grouping parallel lab sessions by subject, supporting up to 2 lab blocks per batch per day with 3-pass retry guarantees.
+                                </p>
+                            </div>
+                        </div>
+
+
+                        <div className="flex justify-end pt-2 border-t border-[#b8ccc8]/40">
+                            <button
+                                onClick={() => setShowChangelog(false)}
+                                className="px-4 py-2 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-extrabold text-xs transition-colors cursor-pointer"
+                            >
+                                Close Changelog
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* 2. PROPRIETARY ALGORITHM: ATLAS */}
             <section id="atlas-algorithm" className="space-y-6 scroll-mt-20">
@@ -153,7 +257,7 @@ export default function HomePage({ onLaunchStudio }) {
                     <div className="p-6 rounded-2xl bg-white border border-red-200 shadow-2xs space-y-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 font-bold">
-                                ❌
+                                <XCircle className="w-5 h-5 text-red-600" />
                             </div>
                             <div>
                                 <h3 className="text-base font-extrabold text-[#0f172a]">

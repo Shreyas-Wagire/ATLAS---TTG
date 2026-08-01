@@ -1,13 +1,17 @@
-export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule) {
+import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints";
+
+export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule, facultyAvailability = {}) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
     function isFacultyBusy(faculty, day, slot) {
-        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "DEPT-FACULTY" || faculty === "TBD-FACULTY") return false;
+        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "DEPT-FACULTY" || faculty === "TBD-FACULTY" || faculty.endsWith("-FACULTY")) return false;
+        // Hard block from Faculty Availability Constraints
+        if (isFacultyBlockedByAvailability(facultyAvailability, faculty, day, slot)) return true;
         return !!facultySchedule[faculty]?.[day]?.[slot];
     }
 
     function markFacultyBusy(faculty, day, slot) {
-        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "DEPT-FACULTY" || faculty === "TBD-FACULTY") return;
+        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "DEPT-FACULTY" || faculty === "TBD-FACULTY" || faculty.endsWith("-FACULTY")) return;
         if (!facultySchedule[faculty]) facultySchedule[faculty] = {};
         if (!facultySchedule[faculty][day]) facultySchedule[faculty][day] = {};
         facultySchedule[faculty][day][slot] = true;
@@ -17,6 +21,7 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
         if (!faculty || !facultySchedule[faculty]?.[day]) return;
         delete facultySchedule[faculty][day][slot];
     }
+
 
     // Process all classes in timetable
     Object.keys(timetable).forEach((timetableKey) => {
@@ -120,7 +125,7 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
                     const day = days[d];
                     for (let s = 0; s < 6; s++) {
                         if (classTable[day][s] === null) {
-                            const backupFaculty = `${lecture.faculty || "DEPT"}-FACULTY`;
+                            const backupFaculty = "DEPT-FACULTY";
                             classTable[day][s] = {
                                 ...lecture,
                                 faculty: backupFaculty,
@@ -135,6 +140,7 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
                     }
                 }
             }
+
         });
     });
 

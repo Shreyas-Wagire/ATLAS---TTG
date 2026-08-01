@@ -15,12 +15,13 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
     const roomSlotMap = {};    // room -> day -> slot -> [{divisionKey, subject, type}]
 
     function registerFaculty(faculty, day, slot, divisionKey, subject, type) {
-        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "TBD-FACULTY" || faculty === "DEPT-FACULTY") return;
+        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "TBD-FACULTY" || faculty === "DEPT-FACULTY" || faculty.endsWith("-FACULTY") || faculty.includes("TBD")) return;
         if (!facultySlotMap[faculty]) facultySlotMap[faculty] = {};
         if (!facultySlotMap[faculty][day]) facultySlotMap[faculty][day] = {};
         if (!facultySlotMap[faculty][day][slot]) facultySlotMap[faculty][day][slot] = [];
         facultySlotMap[faculty][day][slot].push({ divisionKey, subject, type });
     }
+
 
     function registerRoom(room, day, slot, divisionKey, subject, type) {
         if (!room || room === "TBD" || room === "") return;

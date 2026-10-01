@@ -48,8 +48,12 @@ export default function GenerationReport({
         ...(missingPracticals || []).map(s => ({ ...s, category: "PRACTICAL" })),
     ];
 
-    const allocationRate = totalSessions > 0 ? ((allocatedSessions / totalSessions) * 100).toFixed(1) : 0;
-    const scoreVal = validationScore?.overallScore || 95;
+    const sumReq = (report?.summary?.lecture?.required || 0) + (report?.summary?.tutorial?.required || 0) + (report?.summary?.practical?.required || 0);
+    const sumAlloc = (report?.summary?.lecture?.allocated || 0) + (report?.summary?.tutorial?.allocated || 0) + (report?.summary?.practical?.allocated || 0);
+    const effectiveTotal = totalSessions || sumReq;
+    const effectiveAlloc = allocatedSessions || sumAlloc;
+    const allocationRate = effectiveTotal > 0 ? ((effectiveAlloc / effectiveTotal) * 100).toFixed(1) : 100;
+    const scoreVal = validationScore?.totalScore || validationScore?.overallScore || 95;
 
     // Calculate Total Department Location Occupancy
     const roomEntries = Object.entries(resourceUtilizationReport || {});

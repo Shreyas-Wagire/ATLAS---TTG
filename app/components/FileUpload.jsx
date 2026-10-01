@@ -299,7 +299,7 @@ export default function FileUpload() {
     ];
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#d2dfdc] text-[#334155] font-sans">
+        <div className="min-h-screen flex flex-col text-[#334155] font-sans" style={{ background: 'linear-gradient(180deg, #f0f6f4 0%, #e4edea 30%, #d8e4e0 100%)' }}>
             {/* Unified Smart Header with Navigation Switcher & Integrated Stage Bar */}
             <AppHeader
                 activeView={activeView}

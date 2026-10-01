@@ -54,6 +54,7 @@ export function computeValidationScore(report, conflictReport) {
 
     return {
         totalScore,
+        overallScore: totalScore,
         grade,
         breakdown: {
             allocation: { score: allocationScore, maxScore: 60, rate: Math.round(allocationRate * 100) },

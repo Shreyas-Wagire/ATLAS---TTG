@@ -106,7 +106,16 @@ export function validateTimetable(timetable, sessionPool, resources = {}) {
         });
     });
 
+    const totalSessions = lectureRequired + tutorialRequired + practicalRequired;
+    const allocatedSessions = lectureAllocated + tutorialAllocated + practicalAllocated;
+    const unallocatedSessions = totalSessions - allocatedSessions;
+    const allocationRate = totalSessions > 0 ? Math.round((allocatedSessions / totalSessions) * 100) : 100;
+
     return {
+        totalSessions,
+        allocatedSessions,
+        unallocatedSessions,
+        allocationRate,
         summary: {
             lecture: { required: lectureRequired, allocated: lectureAllocated },
             tutorial: { required: tutorialRequired, allocated: tutorialAllocated },

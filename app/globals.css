@@ -133,3 +133,110 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ================================================
+   PREMIUM HOME PAGE ENHANCEMENTS
+   ================================================ */
+
+/* ---- Scroll-Triggered Section Reveal ---- */
+@keyframes sectionReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.section-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Subtle Academic Grid Pattern ---- */
+.atlas-grid-bg {
+  background-image:
+    linear-gradient(rgba(13, 148, 136, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 148, 136, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ---- Pipeline Connector Line ---- */
+.pipeline-connector {
+  position: relative;
+}
+
+.pipeline-connector::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -1rem;
+  width: 1rem;
+  height: 2px;
+  background: linear-gradient(90deg, #0d9488, #99f6e4);
+  transform: translateY(-50%);
+}
+
+@media (max-width: 768px) {
+  .pipeline-connector::after {
+    top: auto;
+    bottom: -0.75rem;
+    right: 50%;
+    width: 2px;
+    height: 0.75rem;
+    background: linear-gradient(180deg, #0d9488, #99f6e4);
+    transform: translateX(50%);
+  }
+}
+
+.pipeline-connector:last-child::after {
+  display: none;
+}
+
+/* ---- Premium Card Hover ---- */
+.premium-card {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease;
+}
+
+.premium-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-color: #99f6e4;
+}
+
+/* ---- Stat Number Styling ---- */
+.stat-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* ---- Navbar Scroll State ---- */
+.navbar-scrolled {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom-color: rgba(184, 204, 200, 0.6) !important;
+  box-shadow: 0 1px 8px rgba(13, 148, 136, 0.06), 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ---- Subtle Pulse for Pipeline Nodes ---- */
+@keyframes subtlePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, 0); }
+}
+
+.pipeline-node-active {
+  animation: subtlePulse 3s ease-in-out infinite;
+}

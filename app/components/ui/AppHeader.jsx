@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Sparkles,
@@ -45,10 +45,25 @@ export default function AppHeader({
   activeSemester = null,
   onExitToSemesters,
 }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-gradient-to-b from-white via-white to-[#f0f4f3]/60 backdrop-blur-md border-b border-[#b8ccc8] shadow-[0_2px_10px_rgba(13,148,136,0.05)]">
+    <header
+      className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
+        scrolled
+          ? 'navbar-scrolled border-[#b8ccc8]/60'
+          : 'bg-white/80 backdrop-blur-md border-[#b8ccc8]/40'
+      }`}
+    >
       {/* ── ROW 1: Brand, View Navigation & Primary Actions ───────────── */}
-      <div className="max-w-[1520px] w-full mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-[1520px] w-full mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between gap-4 relative">
         {/* Left: Brand Identity & Semester Context */}
         <div className="flex items-center gap-3">
           {/* Official Brand Logo (Light PNG) */}
@@ -57,19 +72,18 @@ export default function AppHeader({
             onClick={() => onViewChange?.('home')}
           >
             <img
-              src="/atlas-logo-light.png"
+              src="/logo.png"
               alt="ATLAS Logo"
-              className="h-7 sm:h-8 w-auto object-contain group-hover:scale-105 transition-transform"
+              className="h-6 sm:h-7 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
             />
 
             <div className="flex items-baseline gap-1.5">
-              <span className="font-extrabold text-sm text-[#0f172a] tracking-tight whitespace-nowrap">
-                <span className="text-[#0d9488]">Engine</span>
+              <span className="font-extrabold text-sm text-[#0d9488] tracking-tight whitespace-nowrap">
+                Engine
               </span>
-              <span className="text-[10px] font-bold text-[#64748b] bg-[#ebf4f2] px-1.5 py-0.5 rounded-md border border-[#b8ccc8]/50">
-                v4.4
+              <span className="text-[10px] font-bold text-[#0f766e] bg-[#ccfbf1]/80 px-1.5 py-0.5 rounded-md border border-[#99f6e4]">
+                v4.5
               </span>
-
             </div>
 
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[9px] font-extrabold rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
@@ -91,14 +105,14 @@ export default function AppHeader({
           )}
         </div>
 
-        {/* Center: Navigation Mode Switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#ebf4f2] border border-[#b8ccc8] shadow-inner shrink-0">
+        {/* Center: Navigation Mode Switcher (Strictly centered on screen) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#f0f4f3] border border-[#e2e8f0] shadow-inner z-10">
           <button
             onClick={() => onViewChange?.('home')}
-            className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
               activeView === 'home'
-                ? 'bg-white text-[#0f766e] shadow-2xs border border-[#b8ccc8]/40'
-                : 'text-[#64748b] hover:text-[#0f172a]'
+                ? 'bg-white text-[#0f766e] shadow-sm border border-[#e2e8f0]'
+                : 'text-[#94a3b8] hover:text-[#0f172a]'
             }`}
           >
             <Home className="w-3.5 h-3.5" />
@@ -106,10 +120,10 @@ export default function AppHeader({
           </button>
           <button
             onClick={() => onViewChange?.('semesters')}
-            className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
               activeView === 'semesters'
-                ? 'bg-[#0d9488] text-white shadow-xs'
-                : 'text-[#64748b] hover:text-[#0f172a]'
+                ? 'bg-[#0d9488] text-white shadow-sm'
+                : 'text-[#94a3b8] hover:text-[#0f172a]'
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
@@ -125,7 +139,7 @@ export default function AppHeader({
               {hasData && (
                 <button
                   onClick={onReset}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-[#64748b] hover:text-red-600 bg-white hover:bg-red-50 border border-[#b8ccc8] hover:border-red-200 rounded-xl transition-all shadow-2xs cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#94a3b8] hover:text-red-600 bg-white hover:bg-red-50 border border-[#e2e8f0] hover:border-red-200 rounded-xl transition-all shadow-2xs cursor-pointer"
                   title="Reset System State"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -185,7 +199,7 @@ export default function AppHeader({
 
       {/* ── ROW 2: Dedicated Stage Pipeline Sub-Header (Studio View) ──── */}
       {activeView === 'studio' && (
-        <div className="bg-[#ebf4f2] border-t border-[#b8ccc8] py-2">
+        <div className="bg-[#f8fafb] border-t border-[#e2e8f0] py-1.5">
           <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
             {STAGES.map((stage, idx) => {
               const isCompleted = stage.id < activeStep;
@@ -197,12 +211,12 @@ export default function AppHeader({
                   <button
                     onClick={() => isUnlocked && onStepClick?.(stage.id)}
                     disabled={!isUnlocked}
-                    className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-200 shrink-0 ${
+                    className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${
                       isActive
-                        ? 'bg-white text-[#0f766e] shadow-xs border border-[#0d9488]/40 ring-2 ring-[#0d9488]/20'
+                        ? 'bg-white text-[#0f766e] shadow-sm border border-[#0d9488]/30 ring-1 ring-[#0d9488]/15'
                         : isCompleted
-                        ? 'bg-[#0d9488]/15 text-[#0f766e] border border-[#0d9488]/30 hover:bg-[#0d9488]/25'
-                        : 'bg-white text-[#64748b] border border-[#b8ccc8] opacity-70'
+                        ? 'bg-[#0d9488]/10 text-[#0f766e] border border-[#0d9488]/20 hover:bg-[#0d9488]/20'
+                        : 'bg-white text-[#94a3b8] border border-[#e2e8f0] opacity-60'
                     } ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                   >
                     <div
@@ -211,7 +225,7 @@ export default function AppHeader({
                           ? 'bg-[#0d9488] text-white shadow-2xs'
                           : isCompleted
                           ? 'bg-[#0f766e] text-white'
-                          : 'bg-[#b8ccc8] text-white'
+                          : 'bg-[#d2dfdc] text-white'
                       }`}
                     >
                       {isCompleted ? <Check className="w-3 h-3" /> : stage.id}
@@ -221,14 +235,14 @@ export default function AppHeader({
                       <span className="font-extrabold text-[11px] leading-tight">
                         {stage.name}
                       </span>
-                      <span className="text-[10px] opacity-80 leading-tight">
+                      <span className="text-[10px] opacity-70 leading-tight font-medium">
                         {stage.label}
                       </span>
                     </div>
                   </button>
 
                   {idx < STAGES.length - 1 && (
-                    <div className="w-6 h-[1px] bg-[#b8ccc8] shrink-0" />
+                    <div className="w-6 h-[1px] bg-[#d2dfdc] shrink-0" />
                   )}
                 </React.Fragment>
               );

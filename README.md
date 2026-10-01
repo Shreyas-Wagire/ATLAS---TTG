@@ -2,7 +2,7 @@
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.2.10-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https.nextjs.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Algorithm](https://img.shields.io/badge/Algorithm-ATLAS_v3.4-0D9488?style=for-the-badge)](https://github.com)
+[![Algorithm](https://img.shields.io/badge/Algorithm-ATLAS_v4.4-0D9488?style=for-the-badge)](https://github.com)
 [![Conflict-Free](https://img.shields.io/badge/Conflict--Free-100%25-10B981?style=for-the-badge)](https://github.com)
 
 **ATLAS** is a constraint-driven academic timetabling software platform designed for university engineering departments. Powered by the proprietary **ATLAS Algorithm** (*Adaptive Timetable and Learning Allocation System*), ATLAS solves NP-Hard university scheduling problems in under 1 second with a 100% zero-conflict guarantee.

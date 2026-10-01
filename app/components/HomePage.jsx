@@ -17,16 +17,16 @@ export default function HomePage({ onLaunchStudio }) {
                 <div className="flex flex-wrap items-center justify-center gap-2">
                     <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold shadow-2xs">
                         <Beaker className="w-3.5 h-3.5 text-amber-600" />
-                        <span>ATLAS Engine v3.4 • RELEASE BUILD</span>
+                        <span>ATLAS Engine v4.4 • RELEASE BUILD</span>
                     </div>
 
-                    {/* Interactive Version v3.4 Changelog Pill */}
+                    {/* Interactive Version v4.4 Changelog Pill */}
                     <button
                         onClick={() => setShowChangelog(true)}
                         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-extrabold shadow-2xs hover:scale-105 transition-transform cursor-pointer"
                     >
                         <Sparkles className="w-3.5 h-3.5 text-[#0d9488]" />
-                        <span>What's New in v3.4</span>
+                        <span>What's New in v4.4</span>
                         <span className="px-1.5 py-0.2 rounded-md bg-[#0d9488] text-white text-[9px] font-black">CHANGELOG</span>
                     </button>
                 </div>
@@ -40,7 +40,7 @@ export default function HomePage({ onLaunchStudio }) {
                 </h1>
 
                 <p className="text-sm sm:text-base text-[#64748b] max-w-2xl mx-auto font-medium leading-relaxed">
-                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm v3.4</strong> (Adaptive Timetable and Learning Allocation System). Real-time faculty occupancy solver, zero-conflict matrix scheduling, and multi-pass practical optimization.
+                    Powered by the proprietary <strong className="text-[#0d9488]">ATLAS Algorithm v4.4</strong> (Adaptive Timetable and Learning Allocation System). College-wide master priority pipeline, multi-course parallel practical stacking (4→3→2→1), dynamic DAPS/RCAA scheduling, and zero-conflict CASC cascade repair.
                 </p>
 
                 <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -49,7 +49,7 @@ export default function HomePage({ onLaunchStudio }) {
                         variant="primary"
                         className="py-3 px-7 text-xs sm:text-sm font-extrabold"
                     >
-                        <span>Launch Timetable Studio (v3.4)</span>
+                        <span>Launch Timetable Studio (v4.4)</span>
                         <ArrowRight className="w-4 h-4" />
                     </ShimmerButton>
 
@@ -62,7 +62,7 @@ export default function HomePage({ onLaunchStudio }) {
                 </div>
             </section>
 
-            {/* VERSION v3.4 CHANGELOG MODAL */}
+            {/* VERSION v4.4 CHANGELOG MODAL */}
             {showChangelog && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeInUp">
                     <div className="bg-white rounded-2xl border border-[#b8ccc8] shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
@@ -72,11 +72,16 @@ export default function HomePage({ onLaunchStudio }) {
                                     <Sparkles className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-base font-extrabold text-[#0f172a]">
-                                        ATLAS Engine v3.4 Changelog
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-extrabold text-[#0f172a]">
+                                            ATLAS Engine v4.4 Changelog
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
+                                            v4.4 RELEASE
+                                        </span>
+                                    </div>
                                     <p className="text-xs text-[#64748b] font-medium">
-                                        Release highlights and system architectural improvements
+                                        Major workflow & backend engine additions (v4.0) with refined UI/UX (.4)
                                     </p>
                                 </div>
                             </div>
@@ -88,52 +93,68 @@ export default function HomePage({ onLaunchStudio }) {
                             </button>
                         </div>
 
-                        <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1 no-scrollbar text-xs">
-                            {/* Feature 1: Faculty Occupancy & Optimizer Engine */}
-                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                    <Cpu className="w-4 h-4 text-[#0d9488]" />
-                                    1. In-Memory Faculty Occupancy & Optimizer Engine
-                                </div>
-                                <p className="text-[#475569] font-medium leading-relaxed">
-                                    Scans all scheduled sessions during generation to create in-memory `facultyOccupancy` maps and `facultyStats`. Automatically resolves double-bookings, dampens consecutive lecture streaks, and executes 1-hop session moves & swaps with full compatibility checks.
-                                </p>
-                            </div>
+                        {/* Version Scheme Badge */}
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-[#475569] flex items-start gap-2">
+                            <span className="font-bold text-[#0f766e] whitespace-nowrap">Versioning Note:</span>
+                            <span>Major digit <strong>4</strong> denotes major backend & frontend workflow architecture additions; decimal <strong>.4</strong> denotes the applied UI/UX tweaks.</span>
+                        </div>
 
-                            {/* Feature 2: Faculty Constraints & Time Availability */}
-                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                    <Users className="w-4 h-4 text-[#0d9488]" />
-                                    2. Faculty Constraints & Time Availability Management
-                                </div>
-                                <p className="text-[#475569] font-medium leading-relaxed">
-                                    Configurable per-faculty time availability rules, blocked slot preferences, maximum daily teaching load boundaries, and automatic conflict prevention during session allocation.
-                                </p>
-                            </div>
-
-                            {/* Feature 3: Semester Creation & Workspace Lifecycle */}
-                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                    <BookOpen className="w-4 h-4 text-[#0d9488]" />
-                                    3. Semester Workspace Creation & Lifecycle Controls
-                                </div>
-                                <p className="text-[#475569] font-medium leading-relaxed">
-                                    Complete semester workspace creation system with full lifecycle status controls: transition seamlessly between Draft, Active, and Archived states, or permanently delete unwanted semester workspaces.
-                                </p>
-                            </div>
-
-                            {/* Feature 4: Subject-Group Practical Solver */}
+                        <div className="space-y-3.5 max-h-[55vh] overflow-y-auto pr-1 no-scrollbar text-xs">
+                            {/* Feature 1: Multi-Course Parallel Practical Stacking */}
                             <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
                                 <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
                                     <Layers className="w-4 h-4 text-[#0d9488]" />
-                                    4. Subject-Group-First Practical Allocation Solver
+                                    1. Multi-Course Parallel Practical Stacking (4 → 3 → 2 → 1)
                                 </div>
                                 <p className="text-[#475569] font-medium leading-relaxed">
-                                    Multi-pass practical solver grouping parallel lab sessions by subject, supporting up to 2 lab blocks per batch per day with 3-pass retry guarantees.
+                                    Practicals from <strong>different courses</strong> (e.g. COA-S2, CP-S3, DSA-S4, OS-S1) are stacked in the same 2-hour window. Absolute priority hierarchy (4 → 3 → 2 → 1) commits the maximum possible stack first. Includes <strong>cross-course preference</strong> to favor diverse course sets and deterministic scarcity tie-breaking with full conflict detection (<code>FACULTY_CONFLICT</code>, <code>BATCH_CONFLICT</code>, <code>RESOURCE_CONFLICT</code>).
+                                </p>
+                            </div>
+
+                            {/* Feature 2: College-Wide Master Scheduling Priority */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Cpu className="w-4 h-4 text-[#0d9488]" />
+                                    2. College-Wide Master Priority Pipeline & CollegeOccupancy
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Replaces independent department runs with a unified institutional pipeline: 1. Global Sessions → 2. Practical Stacking → 3. Synchronized Common-Time → 4. Tutorials → 5. Lectures → 6. CASC Cascade Repair → 7. Optimization. Global reservations remain 100% immutable.
+                                </p>
+                            </div>
+
+                            {/* Feature 3: CASC Cascade Repair */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Sparkles className="w-4 h-4 text-[#0d9488]" />
+                                    3. Course-Preserving Global Cascade Repair (CASC)
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Automated multi-hop slot relocation for stuck sessions. Preserves 100% invariant course-faculty bindings without hallucinated reassignments. Relocates 2-hour practicals atomically without crossing break boundaries or displacing global sessions.
+                                </p>
+                            </div>
+
+                            {/* Feature 4: DAPS & RCAA */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <BookOpen className="w-4 h-4 text-[#0d9488]" />
+                                    4. Dynamic Priority Scheduling (DAPS) & Resource Contention (RCAA)
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Replaces static ordering with multi-factor scarcity ranking: constrained faculty availability, lab shortages, tutorial room demands, and division slot flexibility are dynamically prioritized before placing sessions.
+                                </p>
+                            </div>
+
+                            {/* Feature 5: Faculty Availability & Workspace Lifecycle */}
+                            <div className="p-3.5 rounded-xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
+                                <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
+                                    <Users className="w-4 h-4 text-[#0d9488]" />
+                                    5. Faculty Constraints, Time Availability & Workspace Lifecycle
+                                </div>
+                                <p className="text-[#475569] font-medium leading-relaxed">
+                                    Configurable per-faculty time availability blackout rules, maximum daily teaching load boundaries, and full semester workspace lifecycle controls (Draft, Active, Archived).
                                 </p>
                             </div>
                         </div>
-
 
                         <div className="flex justify-end pt-2 border-t border-[#b8ccc8]/40">
                             <button

@@ -67,7 +67,7 @@ export default function AppHeader({
                 <span className="text-[#0d9488]">Engine</span>
               </span>
               <span className="text-[10px] font-bold text-[#64748b] bg-[#ebf4f2] px-1.5 py-0.5 rounded-md border border-[#b8ccc8]/50">
-                v3.4
+                v4.4
               </span>
 
             </div>

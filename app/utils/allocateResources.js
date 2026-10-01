@@ -3,6 +3,10 @@
  * Smart Dynamic Location Switcher: Strictly assigns classrooms, labs, and tutorial rooms
  * using ONLY real room/lab names from the uploaded resources sheet with 100% CONFLICT-FREE guarantee.
  * Eliminates double-booking clashes by scanning all real room pools and dynamically balancing room load.
+ *
+ * RCAA Enhancement: Labs and rooms are sorted by global weekly occupancy (least-used first)
+ * for better load distribution. This is a SOFT preference — the conflict-free guarantee
+ * is always maintained regardless of ordering.
  */
 export function allocateResources(timetable, resources = {}) {
     if (!timetable) return timetable;
@@ -47,11 +51,42 @@ export function allocateResources(timetable, resources = {}) {
         });
     });
 
+    // ── RCAA Enhancement: Build global resource weekly occupancy count ────
+    // Count how many times each resource is used across the entire timetable.
+    // This allows pressure-aware selection: prefer least-used resources first.
+    const resourceWeeklyUsage = {};
+    divisionKeys.forEach((key) => {
+        days.forEach((day) => {
+            (timetable[key]?.[day] || []).forEach((cell) => {
+                if (!cell) return;
+                if (cell.location && cell.location !== "TBD") {
+                    const norm = String(cell.location).toUpperCase().trim();
+                    resourceWeeklyUsage[norm] = (resourceWeeklyUsage[norm] || 0) + 1;
+                }
+                if (cell.batchAllocations) {
+                    cell.batchAllocations.forEach((b) => {
+                        if (b.location && b.location !== "TBD") {
+                            const norm = String(b.location).toUpperCase().trim();
+                            resourceWeeklyUsage[norm] = (resourceWeeklyUsage[norm] || 0) + 1;
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    // Sort pools by weekly usage (least-used first) for better load distribution
+    function sortByUsage(pool) {
+        return [...pool].sort((a, b) => {
+            const usageA = resourceWeeklyUsage[String(a).toUpperCase().trim()] || 0;
+            const usageB = resourceWeeklyUsage[String(b).toUpperCase().trim()] || 0;
+            return usageA - usageB;
+        });
+    }
+
     days.forEach((day) => {
         // Track occupied room names per slot (0..5)
         const usedRoomsPerSlot = Array.from({ length: 6 }, () => new Set());
-        let roomOffset = 0;
-        let labOffset = 0;
 
         // Step 1: Pre-scan ALL fixed/pre-assigned locations in timetable for this day
         divisionKeys.forEach((key) => {
@@ -74,11 +109,14 @@ export function allocateResources(timetable, resources = {}) {
         });
 
         // Helper: Get a guaranteed CONFLICT-FREE real room using multi-pool search & dynamic extension
+        // RCAA Enhancement: pools are pre-sorted by weekly usage (least-used first)
         function findOrGenerateUniqueRoom(primaryPool, secondaryPool, usedSet, prefix, slotIdx) {
-            const combinedPools = [...(primaryPool || []), ...(secondaryPool || [])];
+            // Sort pools by weekly usage for pressure-aware selection
+            const sortedPrimary = sortByUsage(primaryPool);
+            const sortedSecondary = sortByUsage(secondaryPool);
 
-            // 1. Try finding an unassigned room in primary pool
-            for (const room of primaryPool) {
+            // 1. Try finding an unassigned room in primary pool (sorted by least usage)
+            for (const room of sortedPrimary) {
                 const norm = String(room).toUpperCase().trim();
                 if (!usedSet.has(norm)) {
                     return room;
@@ -86,7 +124,7 @@ export function allocateResources(timetable, resources = {}) {
             }
 
             // 2. Try finding an unassigned room in secondary pool (cross-pool borrowing)
-            for (const room of secondaryPool) {
+            for (const room of sortedSecondary) {
                 const norm = String(room).toUpperCase().trim();
                 if (!usedSet.has(norm)) {
                     return room;
@@ -102,8 +140,9 @@ export function allocateResources(timetable, resources = {}) {
         }
 
         // Helper: Find lab strictly free in slot1 & slot2 (NO static clashes)
+        // RCAA Enhancement: labs are sorted by weekly usage (least-used first)
         function findOrGenerateUniqueLab(usedSetSlot1, usedSetSlot2, slotIdx) {
-            const pools = baseLabs || ["LAB1", "LAB2", "LAB3", "LAB4"];
+            const pools = sortByUsage(baseLabs || ["LAB1", "LAB2", "LAB3", "LAB4"]);
 
             // 1. Try finding a real lab free in BOTH slot1 & slot2
             for (const lab of pools) {

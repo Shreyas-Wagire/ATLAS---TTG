@@ -14,6 +14,11 @@ import { generateLocationTimetable } from "./generateLocationTimetable";
 import { computeValidationScore } from "./computeValidationScore";
 import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints";
 import { optimizeTimetable } from "./optimizeTimetable";
+import { prioritizeSessionPool, reprioritizeUnallocated, generateDAPSReport } from "./daps";
+import { generateRCAAReport } from "./rcaa";
+import { attemptCascadePlacement, generateCASCReport } from "./casc";
+import { CollegeOccupancy } from "./collegeOccupancy";
+import { analyzeUnallocatedSession } from "./allocateSessions";
 
 export function generateSmartTimetable(
     groupedData,
@@ -28,6 +33,8 @@ export function generateSmartTimetable(
     let bestPenalty = Infinity;
     let bestConflictReport = null;
     let bestSessionPool = null;
+    let bestDapsDiagnostics = null;
+    let bestCascResults = [];
 
     for (let trial = 1; trial <= maxTrials; trial++) {
         const clonedGroupedData = JSON.parse(JSON.stringify(groupedData));
@@ -38,22 +45,57 @@ export function generateSmartTimetable(
 
         const sessionPool = generateSessionPool(clonedGroupedData, syncRules);
 
-        // Shuffle session pool on retries to explore different placement orders
-        if (trial > 1) {
-            sessionPool.sort(() => Math.random() - 0.5);
+        // ── DAPS: Dynamic Adaptive Priority Scheduling ────────────────────
+        // Trial 1: Use DAPS to determine optimal session ordering based on
+        // current constraint state (most-constrained sessions first).
+        // Retries: Shuffle with DAPS-informed randomization to explore
+        // different placement orders while still favoring constrained sessions.
+        let dapsDiagnostics = null;
+        if (trial === 1) {
+            const dapsResult = prioritizeSessionPool(
+                sessionPool, timetableObj, facultyAvailability, { preserveTypeOrder: true }
+            );
+            dapsDiagnostics = dapsResult.diagnostics;
+        } else {
+            // On retries, still use DAPS but with some randomization
+            // to explore different orderings
+            const dapsResult = prioritizeSessionPool(
+                sessionPool, timetableObj, facultyAvailability, { preserveTypeOrder: true }
+            );
+            dapsDiagnostics = dapsResult.diagnostics;
+            // Add controlled randomization within priority tiers
+            const typeBuckets = { PRACTICAL: [], TUTORIAL: [], LECTURE: [] };
+            sessionPool.forEach((s) => {
+                if (!s.allocated && typeBuckets[s.type]) {
+                    typeBuckets[s.type].push(s);
+                }
+            });
+            // Shuffle within each type bucket (DAPS already ordered them, but
+            // we add some randomization for diversity across trials)
+            Object.values(typeBuckets).forEach((bucket) => {
+                for (let i = bucket.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [bucket[i], bucket[j]] = [bucket[j], bucket[i]];
+                }
+            });
         }
 
-        // Step 2: Apply fixed constraints (hard)
+        // Step 2: Apply fixed constraints (hard - Priority 1)
         applyFixedConstraints(timetableObj, globalConstraints);
 
-        // Step 3: Allocate practicals → tutorials → lectures (respecting faculty availability blackouts)
-        allocateSessions(timetableObj, sessionPool, facultyAvailability);
+        // Step 2b: Initialize authoritative master CollegeOccupancy and lock global sessions
+        const collegeOccupancy = new CollegeOccupancy(timetableObj, resources, facultyAvailability);
+        collegeOccupancy.lockGlobalSessions(timetableObj, globalConstraints);
+
+        // Step 3: Allocate college-wide in strict priority: Practicals (Parallel 4->3->2->1) → Sync → Tutorials → Lectures
+        allocateSessions(timetableObj, sessionPool, facultyAvailability, resources, collegeOccupancy);
 
         // Step 4: Assign resources (rooms, labs, tutorial rooms)
         allocateResources(timetableObj, resources);
 
-        // Step 5: Run self-healing repair loop (also respects faculty availability)
-        selfHealingRepairLoop(timetableObj, sessionPool, globalConstraints, resources, facultyAvailability);
+        // Step 5: Run self-healing repair loop (Priority 6: CASC Repair)
+        const repairResult = selfHealingRepairLoop(timetableObj, sessionPool, globalConstraints, resources, facultyAvailability);
+        const trialCascResults = repairResult?.cascResults || [];
 
         // Step 5b: Re-run resource allocation to guarantee 100% conflict-free rooms for all repaired sessions
         allocateResources(timetableObj, resources);
@@ -80,13 +122,14 @@ export function generateSmartTimetable(
             resourceClashCount * 500 +
             breakViolations * 200;
 
-
         if (penalty < bestPenalty) {
             bestPenalty = penalty;
             bestTimetable = timetableObj;
             bestReport = report;
             bestConflictReport = conflictReport;
             bestSessionPool = sessionPool;
+            bestDapsDiagnostics = dapsDiagnostics;
+            bestCascResults = trialCascResults;
         }
 
         if (penalty === 0) {
@@ -116,6 +159,11 @@ export function generateSmartTimetable(
     const locationTimetable = generateLocationTimetable(optimizedTimetable);
     const validationScore = computeValidationScore(bestReport, bestConflictReport);
 
+    // ── ALGORITHM DIAGNOSTIC REPORTS ──────────────────────────────────────
+    const rcaaReport = generateRCAAReport(optimizedTimetable, resources);
+    const dapsReport = generateDAPSReport(bestDapsDiagnostics);
+    const cascReport = generateCASCReport(bestCascResults);
+
     return {
         timetable: optimizedTimetable,
         report: bestReport,
@@ -127,6 +175,9 @@ export function generateSmartTimetable(
         locationTimetable,
         validationScore,
         optimizationReport,
+        rcaaReport,
+        dapsReport,
+        cascReport,
     };
 }
 
@@ -137,6 +188,7 @@ export function generateSmartTimetable(
 function selfHealingRepairLoop(timetable, sessionPool, globalConstraints, resources, facultyAvailability = {}) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const MAX_REPAIR_PASSES = 8; // Increased passes for better convergence
+    const cascResults = [];
 
     // Helper: count available slots for a faculty after applying availability blackouts
     function availableSlotCount(faculty) {
@@ -153,12 +205,13 @@ function selfHealingRepairLoop(timetable, sessionPool, globalConstraints, resour
         const facultySchedule = buildFacultySchedule(timetable, days);
 
         // Find all unallocated sessions
-        const unallocated = sessionPool.filter((s) => !s.allocated);
+        let unallocated = sessionPool.filter((s) => !s.allocated);
         if (unallocated.length === 0) break;
 
-        // STRATEGY 2: Sort unallocated sessions most-constrained-first in repair loop.
-        // Faculty with fewest available slots are retried first — they need rescue the most.
-        unallocated.sort((a, b) => availableSlotCount(a.faculty) - availableSlotCount(b.faculty));
+        // ── DAPS Reprioritization in Repair Loop ──────────────────────────
+        // Use DAPS dynamic priority scoring instead of static faculty-scarcity sort.
+        // This provides a more comprehensive ordering based on all constraint factors.
+        unallocated = reprioritizeUnallocated(unallocated, timetable, facultyAvailability);
 
         unallocated.forEach((session) => {
             const timetableKey = `${session.year}-${session.division}`;
@@ -172,7 +225,7 @@ function selfHealingRepairLoop(timetable, sessionPool, globalConstraints, resour
                 if (!daySlots) continue;
 
                 if (session.type === "PRACTICAL") {
-                    const validStarts = [0, 2, 4, 1, 3];
+                    const validStarts = [0, 2, 4];
                     for (const slot of validStarts) {
                         if (session.allocated) break;
                         if (slot + 1 >= 6) continue;
@@ -313,10 +366,41 @@ function selfHealingRepairLoop(timetable, sessionPool, globalConstraints, resour
                     }
                 }
             }
+
+            // --- Pass D: CASC — Constraint-Aware Swap Cascade (depth 3+) ---
+            // If all simpler passes failed, try a bounded multi-hop cascade.
+            // CASC searches chains of length up to MAX_CASCADE_DEPTH (default 3)
+            // where each movement preserves ALL hard constraints.
+            if (!session.allocated) {
+                const cascResult = attemptCascadePlacement({
+                    timetable,
+                    session,
+                    facultySchedule,
+                    facultyAvailability,
+                    config: { MAX_CASCADE_DEPTH: 4 },
+                });
+
+                cascResults.push(cascResult);
+
+                if (cascResult.success) {
+                    repaired = true;
+                    if (cascResult.diagnostics?.formattedLog) {
+                        console.log("\n" + cascResult.diagnostics.formattedLog);
+                    } else {
+                        console.log(
+                            `  [CASC] Cascade of depth ${cascResult.chain?.length || 0} placed ` +
+                            `${session.subject || session.subjectName} (${session.type}) ` +
+                            `for ${session.year}-${session.division}`
+                        );
+                    }
+                }
+            }
         });
 
         if (!repaired) break;
     }
+
+    return { cascResults };
 }
 
 

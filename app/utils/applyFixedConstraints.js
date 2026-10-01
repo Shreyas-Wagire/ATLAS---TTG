@@ -58,7 +58,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
             ? constraint.day.split(/[-,\s]+/).map((d) => d.trim().toUpperCase()).filter(Boolean)
             : [];
 
-        const slot = getSlotIndex(constraint.time);
+        const slot = typeof constraint.slotIndex === "number" ? constraint.slotIndex : getSlotIndex(constraint.time);
 
         if (slot === undefined) {
             console.warn("Unknown Time Slot in Global Constraint:", constraint.time);
@@ -72,7 +72,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
         );
 
         // Normalize display name for official titles
-        let displayName = constraint.courseName || "FIXED";
+        let displayName = constraint.courseName || constraint.subject || "FIXED";
         const normUpper = displayName.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
         const isAptitude = isAptitudeSubject(displayName);
@@ -91,16 +91,21 @@ export function applyFixedConstraints(timetable, globalConstraints) {
             displayName = "Modern Indian Language/ Foreign Languages";
         }
 
-        divisions.forEach((division) => {
-            const constraintFaculty = constraint.divisions?.[division];
+        const targetYears = (constraintYear === "ALL" || !constraintYear)
+            ? ["SY", "TY", "BTECH"]
+            : [constraintYear];
 
-            if (hasDivisionFaculty && (!constraintFaculty || String(constraintFaculty).trim() === "")) {
-                return;
-            }
+        targetYears.forEach((cYear) => {
+            divisions.forEach((division) => {
+                const constraintFaculty = constraint.divisions?.[division];
 
-            const timetableKey = `${constraintYear}-${division}`;
+                if (hasDivisionFaculty && (!constraintFaculty || String(constraintFaculty).trim() === "")) {
+                    return;
+                }
 
-            if (!timetable[timetableKey]) return;
+                const timetableKey = `${cYear}-${division}`;
+
+                if (!timetable[timetableKey]) return;
 
             days.forEach((dayCode) => {
                 const day = dayMap[dayCode];
@@ -120,35 +125,38 @@ export function applyFixedConstraints(timetable, globalConstraints) {
 
                 if (is2HourBlock && slot < 5) {
                     timetable[timetableKey][day][slot] = {
-                        year: constraintYear,
+                        year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
+                        isGlobal: true,
                         span: 2,
                         day: constraint.day,
                         time: constraint.time,
                     };
                     timetable[timetableKey][day][slot + 1] = {
-                        year: constraintYear,
+                        year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
+                        isGlobal: true,
                         span: 0,
                         day: constraint.day,
                         time: constraint.time,
                     };
                 } else {
                     timetable[timetableKey][day][slot] = {
-                        year: constraintYear,
+                        year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
+                        isGlobal: true,
                         span: 1,
                         day: constraint.day,
                         time: constraint.time,
@@ -157,6 +165,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
             });
         });
     });
+});
 
     return timetable;
 }

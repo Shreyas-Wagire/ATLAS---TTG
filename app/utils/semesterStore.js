@@ -6,22 +6,212 @@
 
 const STORAGE_KEY = "atlas_semesters";
 
+let isMigrationDone = false;
+
 function loadAll() {
     if (typeof window === "undefined") return [];
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!isMigrationDone && Array.isArray(parsed)) {
+            isMigrationDone = true;
+            // Check if any existing semester still holds heavy uncompacted grids
+            const hasHeavyData = parsed.some(
+                (s) => s && (s.facultyTimetable || s.locationTimetable || s.batchTimetable || s.resourceResolutionPreview)
+            );
+            if (hasHeavyData) {
+                setTimeout(() => {
+                    saveAll(parsed);
+                }, 0);
+            }
+        }
+        return parsed;
     } catch {
         return [];
     }
 }
 
+/**
+ * Strips redundant derived grids, heavy debug dumps, and deep diagnostic objects
+ * to reduce localStorage footprint by ~85-95% while keeping all essential data.
+ */
+function compactSemesterForStorage(semester) {
+    if (!semester || typeof semester !== "object") return semester;
+
+    // Compact timetable cells if present
+    let compactedTimetable = semester.timetable;
+    if (compactedTimetable && typeof compactedTimetable === "object") {
+        compactedTimetable = {};
+        Object.entries(semester.timetable).forEach(([divKey, dayMap]) => {
+            compactedTimetable[divKey] = {};
+            if (dayMap && typeof dayMap === "object") {
+                Object.entries(dayMap).forEach(([day, slots]) => {
+                    compactedTimetable[divKey][day] = (slots || []).map((cell) => {
+                        if (!cell) return null;
+                        const cleanCell = { ...cell };
+                        delete cleanCell.diagnosticReason;
+                        delete cleanCell.rejectionReasons;
+                        if (Array.isArray(cleanCell.batchAllocations)) {
+                            cleanCell.batchAllocations = cleanCell.batchAllocations.map((alloc) => {
+                                if (!alloc) return alloc;
+                                const cleanAlloc = { ...alloc };
+                                if (cleanAlloc.labResolution) {
+                                    cleanAlloc.labResolution = {
+                                        primaryLab: cleanAlloc.labResolution.primaryLab,
+                                        assignedLab: cleanAlloc.labResolution.assignedLab,
+                                        status: cleanAlloc.labResolution.status,
+                                    };
+                                }
+                                return cleanAlloc;
+                            });
+                        }
+                        return cleanCell;
+                    });
+                });
+            }
+        });
+    }
+
+    const compactMissing = (arr = []) => (arr || []).slice(0, 20).map((s) => ({
+        subject: s.subject || s.subjectName,
+        year: s.year,
+        division: s.division,
+        batch: s.batch,
+        faculty: s.faculty,
+        type: s.type,
+        diagnosticReason: s.diagnosticReason || (s.rejectionReasons && s.rejectionReasons[0]),
+    }));
+
+    return {
+        ...semester,
+        timetable: compactedTimetable,
+        // Pre-compute cachedStats for fast dashboard card rendering
+        cachedStats: getSemesterStats(semester),
+        // Exclude redundant derived grids (they are easily re-derived from timetable on load)
+        facultyTimetable: null,
+        locationTimetable: null,
+        batchTimetable: null,
+        resourceResolutionPreview: null,
+        // Keep essential report summaries
+        report: semester.report ? {
+            totalSessions: semester.report.totalSessions,
+            allocatedSessions: semester.report.allocatedSessions,
+            allocationRate: semester.report.allocationRate,
+            unallocatedCount: semester.report.unallocatedCount,
+            summary: semester.report.summary,
+            missingLectures: compactMissing(semester.report.missingLectures),
+            missingTutorials: compactMissing(semester.report.missingTutorials),
+            missingPracticals: compactMissing(semester.report.missingPracticals),
+        } : null,
+        conflictReport: semester.conflictReport ? {
+            summary: semester.conflictReport.summary,
+            totalClashes: semester.conflictReport.totalClashes,
+            conflicts: (semester.conflictReport.conflicts || []).slice(0, 30),
+        } : null,
+        facultyWorkloadReport: semester.facultyWorkloadReport && typeof semester.facultyWorkloadReport === "object"
+            ? Object.fromEntries(
+                Object.entries(semester.facultyWorkloadReport).map(([k, v]) => [
+                    k,
+                    {
+                        faculty: v.faculty || k,
+                        lectures: v.lectures || 0,
+                        tutorials: v.tutorials || 0,
+                        practicals: v.practicals || 0,
+                        totalHours: v.totalHours || 0,
+                        status: v.status || ((v.totalHours || 0) > 18 ? "HEAVY LOAD" : "OPTIMAL"),
+                    }
+                ])
+            )
+            : null,
+        resourceUtilizationReport: semester.resourceUtilizationReport ? {
+            summary: semester.resourceUtilizationReport.summary,
+            resources: (semester.resourceUtilizationReport.resources || []).map((r) => ({
+                name: r.name,
+                type: r.type,
+                usedSlots: r.usedSlots,
+                totalSlots: r.totalSlots,
+                utilizationRate: r.utilizationRate,
+                status: r.status,
+            })),
+        } : null,
+        optimizationReport: semester.optimizationReport ? {
+            initialScore: semester.optimizationReport.initialScore,
+            finalScore: semester.optimizationReport.finalScore,
+        } : null,
+    };
+}
+
 function saveAll(semesters) {
     if (typeof window === "undefined") return;
+    const compacted = (semesters || []).map(compactSemesterForStorage);
+
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(semesters));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(compacted));
+        return;
     } catch (e) {
-        console.warn("ATLAS: localStorage quota exceeded. Consider archiving old semesters.", e);
+        console.warn("ATLAS: localStorage quota warning, initiating automatic storage recovery...", e);
+    }
+
+    // Tier 1: For older or non-active semesters, preserve cachedStats and metadata, release heavy timetable
+    try {
+        const tier1 = compacted.map((s, idx) => {
+            if (idx === 0 || s.status === "active") return s;
+            return {
+                ...s,
+                timetable: null,
+                yearWiseData: null,
+                cachedStats: getSemesterStats(s),
+            };
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tier1));
+        console.info("ATLAS: Successfully recovered localStorage quota via Tier 1 compaction.");
+        return;
+    } catch (e1) {
+        console.warn("ATLAS: Tier 1 recovery failed, attempting Tier 2...", e1);
+    }
+
+    // Tier 2: Retain only the 3 most recently updated semesters
+    try {
+        const tier2 = compacted.slice(0, 3);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tier2));
+        console.info("ATLAS: Successfully recovered localStorage quota via Tier 2 compaction.");
+        return;
+    } catch (e2) {
+        console.warn("ATLAS: Tier 2 recovery failed, attempting Tier 3...", e2);
+    }
+
+    // Tier 3: Retain only the active / newest semester
+    try {
+        const tier3 = compacted.slice(0, 1);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tier3));
+        console.info("ATLAS: Successfully recovered localStorage quota via Tier 3 compaction.");
+        return;
+    } catch (e3) {
+        console.warn("ATLAS: Tier 3 recovery failed, attempting Tier 4 ultra-compact...", e3);
+    }
+
+    // Tier 4: Ultra-compact newest semester (timetable + cachedStats only)
+    try {
+        const newest = compacted[0];
+        if (newest) {
+            const ultra = [{
+                id: newest.id,
+                name: newest.name,
+                academicYear: newest.academicYear,
+                semNumber: newest.semNumber,
+                department: newest.department,
+                createdAt: newest.createdAt,
+                updatedAt: newest.updatedAt,
+                status: newest.status,
+                timetable: newest.timetable,
+                cachedStats: getSemesterStats(newest),
+            }];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(ultra));
+            console.info("ATLAS: Successfully recovered localStorage quota via Tier 4 ultra-compaction.");
+        }
+    } catch (e4) {
+        console.error("ATLAS: Fatal storage quota failure. Could not persist semester.", e4);
     }
 }
 
@@ -150,6 +340,9 @@ function inspectTimetableAllocations(timetable) {
 export function getSemesterStats(semester) {
     if (!semester) {
         return { allocationRate: 0, conflictCount: 0, validationScore: 0, hasData: false };
+    }
+    if (semester.cachedStats) {
+        return semester.cachedStats;
     }
 
     const timetable = semester.timetable;

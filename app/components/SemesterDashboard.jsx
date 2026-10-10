@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Plus, Calendar, BookOpen, BarChart3, Trash2, LogIn,
     Eye, Archive, Sparkles, Clock, Building2, Hash,
@@ -209,14 +209,10 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
 }
 
 export default function SemesterDashboard({ onEnterSemester }) {
-    const [semesters, setSemesters] = useState([]);
+    const [semesters, setSemesters] = useState(() => getAllSemesters());
     const [showModal, setShowModal] = useState(false);
     const [filter, setFilter] = useState("all"); // 'all' | 'active' | 'draft' | 'archived'
     const [searchQuery, setSearchQuery] = useState("");
-
-    useEffect(() => {
-        setSemesters(getAllSemesters());
-    }, []);
 
     const refresh = () => setSemesters(getAllSemesters());
 

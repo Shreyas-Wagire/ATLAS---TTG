@@ -8,7 +8,7 @@ export function parseSyncConstraints(rows) {
         if (
             index === 0 &&
             (String(row[0] || "").toLowerCase().includes("group") ||
-             String(row[1] || "").toLowerCase().includes("course"))
+                String(row[1] || "").toLowerCase().includes("course"))
         ) {
             return;
         }

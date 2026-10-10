@@ -6,6 +6,13 @@
 // Practical allowed blocks: [slot0, slot1], [slot2, slot3], [slot4, slot5]
 const PRACTICAL_VALID_BLOCKS = [[0, 1], [2, 3], [4, 5]];
 
+function isRealFaculty(faculty) {
+    if (!faculty) return false;
+    const f = String(faculty).trim().toUpperCase();
+    if (/^[XYZ]\d+$/i.test(f) || f.startsWith("EXT")) return false;
+    return f !== "" && f !== "TBD" && f !== "FIXED" && f !== "TBD-FACULTY" && f !== "DEPT-FACULTY" && !f.endsWith("-FACULTY") && !f.includes("TBD");
+}
+
 export function generateConflictReport(timetable, sessionPool, globalConstraints = []) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const conflicts = [];
@@ -14,12 +21,12 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
     const facultySlotMap = {}; // faculty -> day -> slot -> [{divisionKey, subject, type}]
     const roomSlotMap = {};    // room -> day -> slot -> [{divisionKey, subject, type}]
 
-    function registerFaculty(faculty, day, slot, divisionKey, subject, type) {
-        if (!faculty || faculty === "TBD" || faculty === "FIXED" || faculty === "TBD-FACULTY" || faculty === "DEPT-FACULTY" || faculty.endsWith("-FACULTY") || faculty.includes("TBD")) return;
+    function registerFaculty(faculty, day, slot, divisionKey, subject, type, isSync = false) {
+        if (!isRealFaculty(faculty)) return;
         if (!facultySlotMap[faculty]) facultySlotMap[faculty] = {};
         if (!facultySlotMap[faculty][day]) facultySlotMap[faculty][day] = {};
         if (!facultySlotMap[faculty][day][slot]) facultySlotMap[faculty][day][slot] = [];
-        facultySlotMap[faculty][day][slot].push({ divisionKey, subject, type });
+        facultySlotMap[faculty][day][slot].push({ divisionKey, subject, type, isSync });
     }
 
 
@@ -55,6 +62,31 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
                         }
                     });
 
+                    // PRACTICAL FACULTY MULTI-BATCH VIOLATION: each batch MUST have a distinct faculty
+                    if (type === "PRACTICAL" && cell.batchAllocations) {
+                        const batchFacultyCount = {};
+                        cell.batchAllocations.forEach((alloc) => {
+                            const fac = alloc.faculty;
+                            if (fac && isRealFaculty(fac)) {
+                                batchFacultyCount[fac] = (batchFacultyCount[fac] || 0) + 1;
+                            }
+                        });
+                        Object.entries(batchFacultyCount).forEach(([fac, count]) => {
+                            if (count > 1) {
+                                conflicts.push({
+                                    type: "PRACTICAL_FACULTY_DUPLICATE_BATCH",
+                                    severity: "CRITICAL",
+                                    divisionKey,
+                                    day,
+                                    slot: slotIdx,
+                                    faculty: fac,
+                                    description: `Faculty ${fac} is assigned to ${count} batches in practical session on ${day} slot ${slotIdx + 1}. Each batch must have a different faculty.`,
+                                    suggestion: "Ensure each practical batch has a distinct faculty.",
+                                });
+                            }
+                        });
+                    }
+
                     // PRACTICAL BREAK VIOLATION: check span=2 starts at valid block
                     if (type === "PRACTICAL" && cell.span === 2) {
                         const validStart = PRACTICAL_VALID_BLOCKS.some(([s]) => s === slotIdx);
@@ -72,8 +104,33 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
                         }
                     }
                 } else {
-                    registerFaculty(cell.faculty, day, slotIdx, divisionKey, cell.subject, type);
+                    const isSync = Boolean(cell.isSync || cell.syncGroup || cell.isGlobal || cell.fixed);
+                    registerFaculty(cell.faculty, day, slotIdx, divisionKey, cell.subject, type, isSync);
                     registerRoom(cell.location, day, slotIdx, divisionKey, cell.subject, type);
+                }
+            });
+
+            // Check for duplicate lectures of same course in same day (strictly forbidden)
+            const dailyCourseLectureCount = {};
+            slots.forEach((cell) => {
+                if (cell && (cell.type === "LECTURE" || cell.type === "THEORY") && !cell.fixed) {
+                    const subj = (cell.subject || cell.courseCode || cell.courseName || "").toUpperCase().trim();
+                    if (subj) {
+                        dailyCourseLectureCount[subj] = (dailyCourseLectureCount[subj] || 0) + 1;
+                    }
+                }
+            });
+            Object.entries(dailyCourseLectureCount).forEach(([subj, count]) => {
+                if (count > 1) {
+                    conflicts.push({
+                        type: "SAME_COURSE_DUPLICATE_LECTURE_PER_DAY",
+                        severity: "HIGH",
+                        divisionKey,
+                        day,
+                        subject: subj,
+                        description: `Course "${subj}" has ${count} lectures on ${day} in ${divisionKey}. Duplicate lectures per day are strictly prohibited.`,
+                        suggestion: "Distribute lectures across distinct days of the week.",
+                    });
                 }
             });
         });
@@ -85,6 +142,10 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
             Object.entries(slotMap).forEach(([slot, usages]) => {
                 const uniqueClasses = new Set(usages.map((u) => u.divisionKey));
                 if (uniqueClasses.size > 1) {
+                    const isSynchronized = usages.length > 1 && usages.every((u) => u.isSync);
+                    if (isSynchronized) {
+                        return; // Co-scheduled sync lecture taught to both divisions simultaneously
+                    }
                     conflicts.push({
                         type: "FACULTY_CLASH",
                         severity: "CRITICAL",
@@ -158,6 +219,8 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
         RESOURCE_CLASH: 0,
         PRACTICAL_BREAK_VIOLATION: 0,
         FIXED_CONSTRAINT_VIOLATION: 0,
+        PRACTICAL_FACULTY_DUPLICATE_BATCH: 0,
+        SAME_COURSE_DUPLICATE_LECTURE_PER_DAY: 0,
         total: conflicts.length,
     };
 

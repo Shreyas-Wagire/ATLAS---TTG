@@ -1,6 +1,18 @@
-import { isAptitudeSubject } from "./normalizeSubjectName";
+import { isAptitudeSubject } from "./normalizeSubjectName.js";
+import { getResolutionForCourse, LAB_STATUS } from "./courseLabResolver.js";
 
-export function generateSessionPool(yearWiseData, syncConstraints = []) {
+/**
+ * Generate the session pool from yearWiseData.
+ *
+ * v5.5: Accepts an optional courseLabResolutions map so that each
+ * practical session is stamped with its primary lab initial and
+ * resource status at creation time.
+ *
+ * @param {Object} yearWiseData
+ * @param {Array}  syncConstraints
+ * @param {Object} courseLabResolutions - from buildCourseLabResolutions() (optional)
+ */
+export function generateSessionPool(yearWiseData, syncConstraints = [], courseLabResolutions = null) {
     const sessionPool = [];
     const possibleDivisions = ["A", "B", "C"];
 
@@ -30,7 +42,7 @@ export function generateSessionPool(yearWiseData, syncConstraints = []) {
         // 3. Generate PRACTICAL sessions (Batch level: 1-12 or 1-8)
         courses.forEach((course) => {
             if (course.P > 0) {
-                createPracticalSessionsForBatches(sessionPool, year, course, syncConstraints);
+                createPracticalSessionsForBatches(sessionPool, year, course, syncConstraints, courseLabResolutions);
             }
         });
     });
@@ -102,9 +114,10 @@ function createTutorialSessionsForBatches(sessionPool, year, course, syncConstra
         const batchFaculty = course.batches?.[b];
         const divFaculty = course.divisions?.[division];
 
+        const hasBatchInDiv = hasBatchFacultyForDivision(course, division);
         const rawFaculty = batchFaculty && String(batchFaculty).trim() !== ""
             ? String(batchFaculty).trim()
-            : (hasBatchCols ? null : divFaculty);
+            : (hasBatchInDiv ? null : divFaculty);
 
         if (!rawFaculty || String(rawFaculty).trim() === "" || String(rawFaculty).trim() === "-") continue;
 
@@ -125,12 +138,15 @@ function createTutorialSessionsForBatches(sessionPool, year, course, syncConstra
                 resourceType: "TUTORIAL_ROOM",
                 syncGroup,
                 allocated: false,
+                hasBatchCols,
+                // TY and BTECH tutorials MUST be co-located in the lab session window
+                pairedWithLab: (year === "TY" || year === "BTECH"),
             });
         }
     }
 }
 
-function createPracticalSessionsForBatches(sessionPool, year, course, syncConstraints) {
+function createPracticalSessionsForBatches(sessionPool, year, course, syncConstraints, courseLabResolutions = null) {
     if (isSpecialGlobalCourse(course)) return;
 
     const prefix = getBatchPrefix(year);
@@ -139,14 +155,28 @@ function createPracticalSessionsForBatches(sessionPool, year, course, syncConstr
     const hasBatchCols = hasAnyBatchFaculty(course);
     const subject = getSubjectIdentifier(course);
 
+    // ── v5.5: Attach course-to-lab resolution ──────────────────────────────
+    // Look up the pre-built resolution record for this course so that every
+    // practical session knows its primary lab and compatible fallbacks.
+    const labResolution = courseLabResolutions
+        ? getResolutionForCourse(course.courseName || subject, courseLabResolutions)
+        : null;
+
+    // Primary lab initial: used as the preferred location for scheduling.
+    // If null (UNMAPPED), the session will remain UNRESOLVED unless a
+    // MANUAL override is applied.
+    const primaryLabInitial = labResolution?.primaryLab || null;
+    const labResourceStatus = labResolution?.status || (primaryLabInitial ? LAB_STATUS.MAPPED : LAB_STATUS.UNMAPPED);
+
     for (let b = 1; b <= maxBatches; b++) {
         const division = getDivisionForBatch(b);
         const batchFaculty = course.batches?.[b];
         const divFaculty = course.divisions?.[division];
+        const hasBatchInDiv = hasBatchFacultyForDivision(course, division);
 
         const rawFaculty = batchFaculty && String(batchFaculty).trim() !== ""
             ? String(batchFaculty).trim()
-            : (hasBatchCols ? null : divFaculty);
+            : (hasBatchInDiv ? null : divFaculty);
 
         if (!rawFaculty || String(rawFaculty).trim() === "" || String(rawFaculty).trim() === "-") continue;
 
@@ -160,12 +190,21 @@ function createPracticalSessionsForBatches(sessionPool, year, course, syncConstr
             subject,
             subjectName: course.courseName || subject,
             faculty,
-            location: course.location || "",
+            // location is intentionally empty ("") so the scheduler uses primaryLabInitial.
+            // This prevents the old "any free lab" fallback in allocateResources.
+            location: "",
             type: "PRACTICAL",
             duration: 2,
             resourceType: "LAB",
             syncGroup,
             allocated: false,
+            hasBatchCols,
+            // ── v5.5 Lab Resolution Fields ──────────────────────────────────
+            primaryLabInitial,         // The canonical mapped lab initial (e.g. "GEL")
+            labResourceStatus,         // LAB_STATUS constant
+            labResolution,             // Full resolution record (for fallback lookup at schedule time)
+            // labAssignedInitial is set by the scheduler when it commits a practical
+            // labAssignedStatus is updated to MAPPED/FALLBACK/MANUAL at commit time
         });
     }
 }
@@ -175,6 +214,17 @@ function hasAnyBatchFaculty(course) {
     return Object.values(course.batches).some(
         (f) => f && String(f).trim() !== "" && String(f).trim() !== "-"
     );
+}
+
+function hasBatchFacultyForDivision(course, division) {
+    if (!course || !course.batches) return false;
+    for (const [bStr, f] of Object.entries(course.batches)) {
+        const b = Number(bStr);
+        if (getDivisionForBatch(b) === division && f && String(f).trim() !== "" && String(f).trim() !== "-") {
+            return true;
+        }
+    }
+    return false;
 }
 
 function findSyncGroup(course, syncConstraints) {

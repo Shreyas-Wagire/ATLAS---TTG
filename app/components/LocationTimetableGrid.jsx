@@ -7,10 +7,6 @@ export default function LocationTimetableGrid({ locationTimetable }) {
     const [selectedLocation, setSelectedLocation] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
 
-    if (!locationTimetable || Object.keys(locationTimetable).length === 0) {
-        return null;
-    }
-
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const slots = [
         "9:15 - 10:15",
@@ -21,13 +17,20 @@ export default function LocationTimetableGrid({ locationTimetable }) {
         "3:15 - 4:15",
     ];
 
-    const locationList = Object.keys(locationTimetable);
+    const locationList = useMemo(
+        () => (locationTimetable ? Object.keys(locationTimetable) : []),
+        [locationTimetable]
+    );
 
     const filteredLocationList = useMemo(() => {
         if (!searchQuery.trim()) return locationList;
         const q = searchQuery.toLowerCase();
         return locationList.filter((loc) => loc.toLowerCase().includes(q));
     }, [locationList, searchQuery]);
+
+    if (!locationTimetable || Object.keys(locationTimetable).length === 0) {
+        return null;
+    }
 
     const displayLocations =
         selectedLocation === "ALL"

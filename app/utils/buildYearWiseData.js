@@ -54,14 +54,10 @@ function generateCourseCode(courseName) {
     }
 
     // Open Electives
-    if (name.includes("Open Elective - I"))
-        return "OE-I";
-
-    if (name.includes("Open Elective - II"))
-        return "OE-II";
-
-    if (name.includes("Open Elective - III"))
-        return "OE-III";
+    const oeMatch = name.match(/Open Elective\s*[-–—:]?\s*([IVX]+|\d+)/i);
+    if (oeMatch) {
+        return `OE-${oeMatch[1].toUpperCase()}`;
+    }
 
     // Ignore these words
     const ignoreWords = [

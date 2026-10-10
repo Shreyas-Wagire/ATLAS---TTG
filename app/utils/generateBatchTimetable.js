@@ -50,6 +50,35 @@ export function generateBatchTimetable(timetable) {
                             };
                         }
                     });
+
+                    // Also process embedded tutorial allocations (TY/BTECH lab-merged tutorials)
+                    // Each embedded tutorial batch gets a TUTORIAL entry at the same slot,
+                    // with tutorial room location — appended as tutorialAllocations on the batch entry.
+                    if (type === "PRACTICAL" && Array.isArray(cell.tutorialAllocations) && cell.span !== 0) {
+                        const seenTutBatches = new Set();
+                        cell.tutorialAllocations.forEach((tutAlloc) => {
+                            const batchLabel = tutAlloc.batch;
+                            if (!batchLabel || seenTutBatches.has(batchLabel)) return;
+                            seenTutBatches.add(batchLabel);
+
+                            if (!batchTimetables[batchLabel]) {
+                                batchTimetables[batchLabel] = initBatchGrid();
+                            }
+
+                            // Embed the tutorial info into the existing batch practical entry
+                            const existingEntry = batchTimetables[batchLabel][day][slotIdx];
+                            if (existingEntry) {
+                                existingEntry.embeddedTutorial = {
+                                    type: "TUTORIAL",
+                                    subject: tutAlloc.subject || tutAlloc.subjectName,
+                                    faculty: tutAlloc.faculty,
+                                    location: tutAlloc.location || "",
+                                    batch: batchLabel,
+                                };
+                            }
+                        });
+                    }
+
                 } else if (type === "LECTURE" && cell.span !== 0) {
                     // Lectures belong to the whole division — show in all batches of that division
                     const prefix = getBatchPrefix(divisionKey);

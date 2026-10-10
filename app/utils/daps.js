@@ -25,7 +25,7 @@
  *   w8: PracticalWindowScarcity — (Practicals only) How few 2-hour windows remain
  */
 
-import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints";
+import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints.js";
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 

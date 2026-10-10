@@ -96,19 +96,21 @@ function allocateSynchronizedSessions(timetable, sessionPool, collegeOccupancy) 
     });
 
     Object.entries(syncGroupMap).forEach(([groupName, groupSessions]) => {
-        const courseSessionMap = {};
+        // Group sessions by division key so each linked division has a session queue
+        const divSessionMap = {};
         groupSessions.forEach((s) => {
-            const key = s.subject || s.subjectName || "syncCourse";
-            if (!courseSessionMap[key]) courseSessionMap[key] = [];
-            courseSessionMap[key].push(s);
+            const divKey = `${s.year}-${s.division}`;
+            if (!divSessionMap[divKey]) divSessionMap[divKey] = [];
+            divSessionMap[divKey].push(s);
         });
 
         const maxInstanceCount = Math.max(
-            ...Object.values(courseSessionMap).map((list) => list.length)
+            ...Object.values(divSessionMap).map((list) => list.length)
         );
 
         for (let instanceIdx = 0; instanceIdx < maxInstanceCount; instanceIdx++) {
-            const instanceSessions = Object.values(courseSessionMap)
+            // Pick the instanceIdx-th session from each linked division
+            const instanceSessions = Object.values(divSessionMap)
                 .map((list) => list[instanceIdx])
                 .filter((s) => s && !s.allocated);
 
@@ -131,39 +133,64 @@ function allocateSynchronizedSessions(timetable, sessionPool, collegeOccupancy) 
                         const divKey = `${session.year}-${session.division}`;
                         if (!timetable[divKey]) return false;
 
+                        // Check division slot is free
                         if (has2HourSession || session.duration === 2) {
                             if (!collegeOccupancy.isDivisionFreeForPractical(divKey, day, slot)) return false;
-                            if (isRealFaculty(session.faculty) && !collegeOccupancy.isFacultyFreeForPractical(session.faculty, day, slot)) return false;
                         } else {
                             if (!collegeOccupancy.isDivisionSlotFree(divKey, day, slot)) return false;
-                            if (isRealFaculty(session.faculty) && !collegeOccupancy.isFacultyFree(session.faculty, day, slot)) return false;
+                        }
+
+                        // Avoid scheduling duplicate lectures of the same course on the same day in the division
+                        const existingDivDay = timetable[divKey]?.[day] || [];
+                        const alreadyHasLecture = existingDivDay.some((c) => {
+                            if (!c) return false;
+                            const subj = (c.subject || c.courseCode || c.courseName || "").toUpperCase().trim();
+                            const sessionSubj = (session.subject || session.courseCode || session.courseName || "").toUpperCase().trim();
+                            return subj && sessionSubj && subj === sessionSubj;
+                        });
+                        if (alreadyHasLecture) return false;
+
+                        // Faculty check
+                        if (isRealFaculty(session.faculty)) {
+                            if (has2HourSession || session.duration === 2) {
+                                if (!collegeOccupancy.isFacultyFreeForPractical(session.faculty, day, slot)) return false;
+                            } else {
+                                if (!collegeOccupancy.isFacultyFree(session.faculty, day, slot)) return false;
+                            }
                         }
                         return true;
                     });
 
                     if (canPlaceAll) {
                         // Commit all linked sessions simultaneously
+                        const seenFaculties = new Set();
                         instanceSessions.forEach((session) => {
                             const divKey = `${session.year}-${session.division}`;
                             if (has2HourSession || session.duration === 2) {
                                 timetable[divKey][day][slot] = {
                                     ...session,
-                                    fixed: false,
+                                    fixed: true,
                                     span: 2,
+                                    isSync: true,
                                 };
                                 timetable[divKey][day][slot + 1] = {
                                     ...session,
-                                    fixed: false,
+                                    fixed: true,
                                     span: 0,
+                                    isSync: true,
                                 };
                                 collegeOccupancy.markDivisionOccupied(divKey, day, slot, session);
                                 collegeOccupancy.markDivisionOccupied(divKey, day, slot + 1, session);
-                                if (isRealFaculty(session.faculty)) {
+                                if (isRealFaculty(session.faculty) && !seenFaculties.has(session.faculty)) {
+                                    seenFaculties.add(session.faculty);
                                     collegeOccupancy.markFacultyOccupied(session.faculty, day, slot, session);
                                     collegeOccupancy.markFacultyOccupied(session.faculty, day, slot + 1, session);
                                 }
                             } else {
-                                collegeOccupancy.commitSingleSession(divKey, day, slot, session);
+                                collegeOccupancy.commitSingleSession(divKey, day, slot, { ...session, fixed: true, isSync: true });
+                                if (isRealFaculty(session.faculty)) {
+                                    seenFaculties.add(session.faculty);
+                                }
                             }
                             session.allocated = true;
                         });
@@ -179,7 +206,12 @@ function allocateSynchronizedSessions(timetable, sessionPool, collegeOccupancy) 
 
 /**
  * Allocate tutorial sessions (1-hour, batch-level).
- * Supports parallel tutorial batches running concurrently in different tutorial rooms.
+ *
+ * TY / BTECH rule: tutorials MUST be co-located in the same 2-hour lab window
+ * as the paired practical session for that batch.  Location is always a
+ * TUTORIAL_ROOM (or classroom fallback) — never a lab.
+ *
+ * SY (and other years without pairedWithLab): original parallel-batch logic.
  */
 function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources = {}) {
     const unallocatedTutorials = sessionPool.filter(
@@ -188,9 +220,78 @@ function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources =
 
     if (unallocatedTutorials.length === 0) return;
 
-    // Group tutorials by division
+    // ── PASS A: TY / BTECH tutorials — MUST co-locate in lab (practical) window ──
+    // For TY and BTECH, each tutorial batch is embedded into the practical cell
+    // (tutorialAllocations array) — same 2-hour window, but uses TUTORIAL_ROOM not a lab.
+    const labPairedTutorials = unallocatedTutorials.filter((s) => s.pairedWithLab);
+    const regularTutorials = unallocatedTutorials.filter((s) => !s.pairedWithLab);
+
+    labPairedTutorials.forEach((tutSession) => {
+        if (tutSession.allocated) return;
+
+        const divKey = `${tutSession.year}-${tutSession.division}`;
+        if (!timetable[divKey]) return;
+
+        // Find a practical block where this batch is free and faculty is free
+        let labDay = null;
+        let labSlot = null;
+
+        outer:
+        for (const day of DAYS) {
+            const daySlots = timetable[divKey]?.[day] || [];
+            for (let slot = 0; slot < 6; slot++) {
+                const cell = daySlots[slot];
+                if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2) continue;
+                const batchAllocations = cell.batchAllocations || [];
+                const tutorialAllocations = cell.tutorialAllocations || [];
+                // Batch must not be busy in practical or tutorial in this cell
+                if (batchAllocations.some((b) => b.batch === tutSession.batch)) continue;
+                if (tutorialAllocations.some((t) => t.batch === tutSession.batch)) continue;
+
+                if (collegeOccupancy.isFacultyFree(tutSession.faculty, day, slot) ||
+                    collegeOccupancy.isFacultyFree(tutSession.faculty, day, slot + 1)) {
+                    labDay = day;
+                    labSlot = slot;
+                    break outer;
+                }
+            }
+        }
+
+        if (labDay !== null && labSlot !== null) {
+            const labCell = timetable[divKey][labDay][labSlot];
+            const labTailCell = timetable[divKey][labDay][labSlot + 1];
+
+            let embedded = false;
+            for (const subSlot of [labSlot, labSlot + 1]) {
+                if (!collegeOccupancy.isFacultyFree(tutSession.faculty, labDay, subSlot)) continue;
+                _embedTutorialInLabCell(labCell, labTailCell, tutSession, subSlot, collegeOccupancy, labDay);
+                embedded = true;
+                break;
+            }
+            if (!embedded) {
+                _embedTutorialInLabCell(labCell, labTailCell, tutSession, labSlot, collegeOccupancy, labDay);
+            }
+        }
+
+        // Fallback: strictly embed in any existing practical cell (TY/BTECH tutorials NEVER take standalone division slots)
+        if (!tutSession.allocated) {
+            for (const day of DAYS) {
+                if (tutSession.allocated) break;
+                const daySlots = timetable[divKey]?.[day] || [];
+                for (let slot = 0; slot < 6; slot++) {
+                    const cell = daySlots[slot];
+                    if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2) continue;
+                    const labTailCell = daySlots[slot + 1];
+                    _embedTutorialInLabCell(cell, labTailCell, tutSession, slot, collegeOccupancy, day);
+                    break;
+                }
+            }
+        }
+    });
+
+    // ── PASS B: SY (and other non-lab-paired) tutorials — original parallel logic ──
     const divTutorialMap = {};
-    unallocatedTutorials.forEach((s) => {
+    regularTutorials.forEach((s) => {
         const divKey = `${s.year}-${s.division}`;
         if (!divTutorialMap[divKey]) divTutorialMap[divKey] = [];
         divTutorialMap[divKey].push(s);
@@ -219,13 +320,11 @@ function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources =
                 for (let slot = 0; slot < 6; slot++) {
                     const currentCell = timetable[divKey]?.[day]?.[slot];
 
-                    // Check if slot is empty or an existing tutorial block that can merge another batch
                     const isCellEmpty = currentCell === null;
                     const isCellTutorial = currentCell?.type === "TUTORIAL" && currentCell.span === 1;
 
                     if (!isCellEmpty && !isCellTutorial) continue;
 
-                    // Filter batches in this pair that are free at (day, slot)
                     const allocatableNow = unallocatedInPair.filter((s) => {
                         if (s.allocated) return false;
                         if (!collegeOccupancy.isFacultyFree(s.faculty, day, slot)) return false;
@@ -272,21 +371,72 @@ function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources =
 
         // Individual retry for any still-unallocated tutorials
         tutSessions.filter((s) => !s.allocated).forEach((s) => {
-            for (const day of DAYS) {
-                if (s.allocated) break;
-                for (let slot = 0; slot < 6; slot++) {
-                    if (s.allocated) break;
-                    if (!collegeOccupancy.isDivisionSlotFree(divKey, day, slot)) continue;
-                    if (!collegeOccupancy.isFacultyFree(s.faculty, day, slot)) continue;
-                    if (!collegeOccupancy.isBatchFree(s.batch, day, slot)) continue;
-
-                    collegeOccupancy.commitSingleSession(divKey, day, slot, s);
-                    break;
-                }
-            }
+            _placeTutorialInFreeSlot(s, divKey, timetable, collegeOccupancy);
         });
     });
+
+    // ── PASS C: Final sweep — re-check lab-paired tutorials via lab window lookup ──
+    labPairedTutorials.filter((s) => !s.allocated).forEach((s) => {
+        const divKey = `${s.year}-${s.division}`;
+        _placeTutorialInFreeSlot(s, divKey, timetable, collegeOccupancy);
+    });
 }
+
+/**
+ * Embed a tutorial session into the lab/practical cell of the timetable.
+ * The tutorial is stored in cell.tutorialAllocations — same 2-hour block as lab,
+ * but gets a TUTORIAL_ROOM location (never a lab), assigned later by allocateResources.
+ */
+function _embedTutorialInLabCell(labCell, labTailCell, tutSession, subSlot, collegeOccupancy, labDay) {
+    if (!labCell) return;
+
+    if (!labCell.tutorialAllocations) labCell.tutorialAllocations = [];
+    if (labTailCell && !labTailCell.tutorialAllocations) labTailCell.tutorialAllocations = [];
+
+    // Avoid duplicating the same batch tutorial
+    const alreadyEmbedded = (labCell.tutorialAllocations || []).some(
+        (t) => t.batch === tutSession.batch && t.subject === tutSession.subject
+    );
+    if (alreadyEmbedded) {
+        tutSession.allocated = true;
+        return;
+    }
+
+    const tutEntry = {
+        ...tutSession,
+        resourceType: "TUTORIAL_ROOM",
+        location: "",       // assigned later by allocateResources (tutorial room — never lab)
+        embeddedInLab: true,
+        labSubSlot: subSlot,
+    };
+
+    labCell.tutorialAllocations.push(tutEntry);
+    if (labTailCell) labTailCell.tutorialAllocations = labCell.tutorialAllocations;
+
+    // Mark faculty occupancy for the tutorial sub-slot within the lab window
+    if (isRealFaculty(tutSession.faculty)) {
+        collegeOccupancy.markFacultyOccupied(tutSession.faculty, labDay, subSlot, tutSession);
+    }
+    tutSession.allocated = true;
+}
+
+/**
+ * Place a tutorial in any free division slot (fallback when lab co-location unavailable).
+ */
+function _placeTutorialInFreeSlot(session, divKey, timetable, collegeOccupancy) {
+    for (const day of DAYS) {
+        if (session.allocated) break;
+        for (let slot = 0; slot < 6; slot++) {
+            if (!collegeOccupancy.isDivisionSlotFree(divKey, day, slot)) continue;
+            if (!collegeOccupancy.isFacultyFree(session.faculty, day, slot)) continue;
+            if (!collegeOccupancy.isBatchFree(session.batch, day, slot)) continue;
+
+            collegeOccupancy.commitSingleSession(divKey, day, slot, session);
+            break;
+        }
+    }
+}
+
 
 // ─── PRIORITY 5: LECTURES ────────────────────────────────────────────────────
 
@@ -318,18 +468,38 @@ function allocateLectures(timetable, sessionPool, collegeOccupancy, facultyAvail
             return (b.priorityScore || 0) - (a.priorityScore || 0);
         });
 
-        const tryPlace = (lecture, strict = true) => {
-            for (const day of DAYS) {
+        const tryPlace = (lecture, allowRareDuplicate = false) => {
+            // Sort days:
+            // 1. Days with 0 lectures of this course first
+            // 2. Days with fewer total lectures in this division (load balancing)
+            const sortedDays = [...DAYS].sort((dayA, dayB) => {
+                const targetSubj = (lecture.subject || lecture.courseCode || lecture.courseName || "").toUpperCase().trim();
+                const slotsA = timetable[divKey]?.[dayA] || [];
+                const slotsB = timetable[divKey]?.[dayB] || [];
+                const countCourseA = slotsA.filter((c) => c && (c.subject || c.courseCode || c.courseName || "").toUpperCase().trim() === targetSubj).length;
+                const countCourseB = slotsB.filter((c) => c && (c.subject || c.courseCode || c.courseName || "").toUpperCase().trim() === targetSubj).length;
+                if (countCourseA !== countCourseB) return countCourseA - countCourseB;
+                const totalA = slotsA.filter(Boolean).length;
+                const totalB = slotsB.filter(Boolean).length;
+                return totalA - totalB;
+            });
+
+            for (const day of sortedDays) {
                 if (lecture.allocated) break;
+
+                // Check daily lecture distribution:
+                // Pass 1: STRICT (countOnDay must be 0 — strictly no duplicate lecture)
+                // Pass 2: RARE FALLBACK ONLY (countOnDay < 2)
+                if (!checkLectureDistribution({ timetable, divisionKey: divKey, day, session: lecture, allowRareFallback: allowRareDuplicate })) {
+                    continue;
+                }
 
                 for (let slot = 0; slot < 6; slot++) {
                     if (!collegeOccupancy.isDivisionSlotFree(divKey, day, slot)) continue;
                     if (!collegeOccupancy.isFacultyFree(lecture.faculty, day, slot)) continue;
 
-                    if (strict) {
-                        if (!checkSubjectConstraint({ timetable, divisionKey: divKey, day, slot, session: lecture })) continue;
-                        if (!checkLectureDistribution({ timetable, divisionKey: divKey, day, session: lecture })) continue;
-                    }
+                    // Strictly forbid consecutive lectures of the same course
+                    if (!checkSubjectConstraint({ timetable, divisionKey: divKey, day, slot, session: lecture })) continue;
 
                     collegeOccupancy.commitSingleSession(divKey, day, slot, lecture);
                     return true;
@@ -338,14 +508,15 @@ function allocateLectures(timetable, sessionPool, collegeOccupancy, facultyAvail
             return false;
         };
 
-        // Pass 1: Strict placement (respects daily lecture distribution & consecutive limits)
-        lectures.forEach((s) => {
-            if (!s.allocated) tryPlace(s, true);
-        });
-
-        // Pass 2: Relaxed placement (places wherever division and faculty are free)
+        // Pass 1: Strict distribution (STRICTLY max 1 lecture per course per day across distinct days)
         lectures.forEach((s) => {
             if (!s.allocated) tryPlace(s, false);
+        });
+
+        // Pass 2: Rare condition fallback:
+        // ONLY if a course still has unallocated lectures and literally cannot be placed across distinct days
+        lectures.forEach((s) => {
+            if (!s.allocated) tryPlace(s, true);
         });
     });
 
@@ -357,7 +528,7 @@ function allocateLectures(timetable, sessionPool, collegeOccupancy, facultyAvail
  * Count available slots for a faculty member after blackouts.
  */
 function getAvailableSlotCount(faculty, facultyAvailability = {}) {
-    if (!faculty || !facultyAvailability[faculty]) return 30;
+    if (!faculty || !facultyAvailability || !facultyAvailability[faculty]) return 30;
     let blocked = 0;
     DAYS.forEach((day) => {
         blocked += (facultyAvailability[faculty][day] || []).length;

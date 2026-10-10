@@ -21,7 +21,7 @@ import {
     SLOT_TIMES,
     MAX_DAILY_HOURS,
     MAX_CONSECUTIVE_LECTURES,
-} from "./buildFacultyOccupancy";
+} from "./buildFacultyOccupancy.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -32,7 +32,16 @@ const MAX_OPTIMIZATION_ITERATIONS = 20;
 const GHOST_FACULTIES = new Set(["TBD", "FIXED", "TBD-FACULTY", "DEPT-FACULTY", ""]);
 
 function isRealFaculty(f) {
-    return f && !GHOST_FACULTIES.has(String(f).trim());
+    if (!f) return false;
+    const str = String(f).trim().toUpperCase();
+    if (GHOST_FACULTIES.has(str)) return false;
+    if (/^[XYZ]\d+$/i.test(str) || str.startsWith("EXT")) return false;
+    return true;
+}
+
+function isSessionLocked(cell) {
+    if (!cell) return false;
+    return Boolean(cell.fixed || cell.isSync || cell.syncGroup || cell.isGlobal);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,6 +95,10 @@ function detectFacultyConflicts(timetable, occupancy, stats) {
     Object.entries(slotFacultyMap).forEach(([key, entries]) => {
         const uniqueDivisions = new Set(entries.map((e) => e.divisionKey));
         if (uniqueDivisions.size < 2) return;
+
+        // Do not move intentional synchronized cross-division sessions
+        const isSyncSession = entries.length > 1 && entries.every((e) => e.cell.isSync || e.cell.syncGroup || e.cell.isGlobal || e.cell.fixed);
+        if (isSyncSession) return;
 
         const [faculty, day, slotIdx] = key.split("|");
         conflicts.push({
@@ -210,7 +223,7 @@ function isRoomFreeAt(timetable, room, day, slotIdx) {
  *   ✓ For PRACTICAL: slot+1 must also satisfy class/faculty/room checks
  */
 function canPlaceSessionAt(timetable, session, targetDay, targetSlotIdx) {
-    if (session.fixed) return false;
+    if (isSessionLocked(session)) return false;
 
     // Practical: must start at valid position; needs 2 consecutive free slots
     if (session.type === "PRACTICAL") {
@@ -264,7 +277,7 @@ function canPlaceSessionAt(timetable, session, targetDay, targetSlotIdx) {
  * Neither may be fixed.
  */
 function canSwapSessions(timetable, sessionA, sessionB) {
-    if (sessionA.fixed || sessionB.fixed) return false;
+    if (isSessionLocked(sessionA) || isSessionLocked(sessionB)) return false;
     if (sessionA.divisionKey !== sessionB.divisionKey) return false;
     if (sessionA.type !== sessionB.type) return false; // only swap same-type sessions (same span)
 
@@ -416,7 +429,7 @@ function resolveDoubleBooking(timetable, conflict) {
 
     // Find the sessions involved (prefer moving the non-fixed one)
     const movable = affectedEntries
-        .filter((e) => e.cell && !e.cell.fixed)
+        .filter((e) => e.cell && !isSessionLocked(e.cell))
         .sort((a, b) => {
             // prefer moving the session with fewer batch allocations (simpler)
             const aCount = a.cell?.batchAllocations?.length ?? 1;
@@ -457,7 +470,7 @@ function resolveDoubleBooking(timetable, conflict) {
             for (let targetSlot = 0; targetSlot < 6; targetSlot++) {
                 if (targetDay === day && targetSlot === slotIdx) continue;
                 const targetCell = tt[targetDay]?.[targetSlot];
-                if (!targetCell || targetCell.fixed || targetCell.span === 0) continue;
+                if (!targetCell || isSessionLocked(targetCell) || targetCell.span === 0) continue;
                 if (targetCell.type !== cell.type) continue;
 
                 const sessionB = { ...targetCell, divisionKey, day: targetDay, slotIdx: targetSlot };
@@ -482,7 +495,7 @@ function resolveConsecutiveOverload(timetable, conflict) {
     const lectureSlots = [];
     Object.entries(timetable).forEach(([divisionKey, daysMap]) => {
         (daysMap?.[day] || []).forEach((cell, slotIdx) => {
-            if (!cell || cell.span === 0 || cell.type !== "LECTURE") return;
+            if (!cell || isSessionLocked(cell) || cell.span === 0 || cell.type !== "LECTURE") return;
             if (cell.faculty !== faculty) return;
             lectureSlots.push({ divisionKey, cell, slotIdx });
         });
@@ -557,14 +570,14 @@ function softOptimizeIteration(timetable) {
             const slotsA = daysMap?.[dayA] || [];
             for (let slotA = 0; slotA < 6; slotA++) {
                 const cellA = slotsA[slotA];
-                if (!cellA || cellA.fixed || cellA.span === 0 || cellA.type !== "LECTURE") continue;
+                if (!cellA || isSessionLocked(cellA) || cellA.span === 0 || cellA.type !== "LECTURE") continue;
 
                 for (const dayB of DAYS) {
                     const slotsB = daysMap?.[dayB] || [];
                     for (let slotB = 0; slotB < 6; slotB++) {
                         if (dayA === dayB && slotA === slotB) continue;
                         const cellB = slotsB[slotB];
-                        if (!cellB || cellB.fixed || cellB.span === 0 || cellB.type !== "LECTURE") continue;
+                        if (!cellB || isSessionLocked(cellB) || cellB.span === 0 || cellB.type !== "LECTURE") continue;
 
                         const sessionA = { ...cellA, divisionKey, day: dayA, slotIdx: slotA };
                         const sessionB = { ...cellB, divisionKey, day: dayB, slotIdx: slotB };

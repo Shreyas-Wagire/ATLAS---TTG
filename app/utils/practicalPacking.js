@@ -88,7 +88,7 @@ export function getCourseDiversity(combo) {
  * Calculate scarcity score for a candidate group.
  * Lower remaining windows = higher scarcity weight (more constrained).
  */
-export function getComboScarcityScore(combo, collegeOccupancy, divKey) {
+export function getComboScarcityScore(combo, collegeOccupancy, divKey, courseUnallocatedCounts = {}) {
     let score = 0;
     for (const s of combo) {
         const facScarcity = collegeOccupancy.calculateFacultyPracticalScarcity(s.faculty);
@@ -98,7 +98,10 @@ export function getComboScarcityScore(combo, collegeOccupancy, divKey) {
         const batchWeight = Math.max(0, 15 - batchScarcity);
 
         const priorityBonus = s.priorityScore || 0;
-        score += facWeight * 10 + batchWeight * 2 + priorityBonus;
+        const cKey = (s.subject || s.subjectName || s.courseCode || "").toUpperCase().trim();
+        const backlogBonus = (courseUnallocatedCounts[cKey] || 0) * 1000;
+
+        score += backlogBonus + facWeight * 10 + batchWeight * 2 + priorityBonus;
     }
     return score;
 }
@@ -123,6 +126,16 @@ export function validateCandidateGroup(group, day, slot, collegeOccupancy, divKe
             assignedLabs: [],
             conflictType: "GLOBAL_SESSION_CONFLICT",
             reason: `Slot blocked by global or fixed reservation in ${divKey}`,
+        };
+    }
+
+    // Must contain at least one practical session (tutorials only accompany practicals)
+    if (!group.some((s) => s.type === "PRACTICAL")) {
+        return {
+            valid: false,
+            assignedLabs: [],
+            conflictType: "TUTORIAL_REQUIRES_LAB",
+            reason: "Tutorials must accompany a practical session in the lab window",
         };
     }
 
@@ -166,20 +179,22 @@ export function validateCandidateGroup(group, day, slot, collegeOccupancy, divKe
         }
     }
 
-    // 2. Faculty conflict check: All real faculties must be distinct and free
-    const faculties = new Set();
+    // 2. Faculty conflict check: All real faculties must be distinct and free.
+    //    STRICT INVARIANT: Same faculty CANNOT take multiple batches simultaneously.
+    //    Each batch MUST have a distinct faculty — strictly 1 batch per faculty at a time.
+    const facultySessions = new Map();
     for (const session of group) {
         if (isRealFaculty(session.faculty)) {
-            if (faculties.has(session.faculty)) {
+            if (facultySessions.has(session.faculty)) {
+                const prev = facultySessions.get(session.faculty);
                 return {
                     valid: false,
                     assignedLabs: [],
                     conflictType: "FACULTY_CONFLICT",
-                    reason: `Duplicate faculty ${session.faculty} in parallel stack`,
+                    reason: `Faculty ${session.faculty} cannot take multiple batches (${prev.batch} & ${session.batch}) at the same time. Each batch MUST have a different faculty.`,
                 };
             }
-            faculties.add(session.faculty);
-
+            facultySessions.set(session.faculty, session);
             if (!collegeOccupancy.isFacultyFreeForPractical(session.faculty, day, slot)) {
                 return {
                     valid: false,
@@ -191,13 +206,54 @@ export function validateCandidateGroup(group, day, slot, collegeOccupancy, divKe
         }
     }
 
-    // 3. Resource / Lab conflict check: Each practical must have its own valid available lab
-    const availableLabs = collegeOccupancy.getAvailableLabsForPractical(day, slot);
+    // v5.5: Use course-to-lab resolution instead of any free lab.
     const assignedLabs = [];
     const usedLabs = new Set();
 
     for (const session of group) {
-        if (session.location && session.location !== "TBD" && session.location !== "FIXED") {
+
+        const locationData = collegeOccupancy.resources?.locationData || null;
+
+        // ── Case 0: Tutorial session merged into lab window ───────────────────
+        if (session.type === "TUTORIAL") {
+            const baseTR = collegeOccupancy.resources?.tutorialRooms || ["TR1", "TR2"];
+            const baseCR = collegeOccupancy.resources?.classrooms || ["C1", "C2", "C3", "C4", "C5", "C6"];
+
+            let assignedTutRoom = null;
+            for (const tr of baseTR) {
+                const norm = String(tr).toUpperCase().trim();
+                if (!usedLabs.has(norm) && collegeOccupancy.isTutorialRoomFreeForPractical(tr, day, slot)) {
+                    assignedTutRoom = tr;
+                    usedLabs.add(norm);
+                    break;
+                }
+            }
+            if (!assignedTutRoom) {
+                for (const cr of baseCR) {
+                    const norm = String(cr).toUpperCase().trim();
+                    if (!usedLabs.has(norm) && collegeOccupancy.isClassroomFreeForPractical(cr, day, slot)) {
+                        assignedTutRoom = cr;
+                        usedLabs.add(norm);
+                        break;
+                    }
+                }
+            }
+            if (!assignedTutRoom) {
+                assignedTutRoom = baseTR[0] || "TR1";
+            }
+
+            assignedLabs.push({
+                labInitial: assignedTutRoom,
+                status: "MAPPED",
+                isTutorial: true,
+                resourceType: "TUTORIAL_ROOM",
+                reason: `Tutorial room "${assignedTutRoom}" assigned for merged tutorial`,
+            });
+            continue;
+        }
+
+        // ── Case A: Session already has a pre-assigned location (FIXED or MANUAL) ──
+        if (session.location && session.location !== "TBD" && session.location !== "FIXED" && session.location !== "") {
             const locNorm = String(session.location).toUpperCase().trim();
             if (usedLabs.has(locNorm) || !collegeOccupancy.isLabFreeForPractical(session.location, day, slot)) {
                 return {
@@ -208,20 +264,99 @@ export function validateCandidateGroup(group, day, slot, collegeOccupancy, divKe
                 };
             }
             usedLabs.add(locNorm);
-            assignedLabs.push(session.location);
-        } else {
-            const labChoice = availableLabs.find((l) => !usedLabs.has(String(l).toUpperCase().trim()));
-            if (!labChoice) {
-                return {
-                    valid: false,
-                    assignedLabs: [],
-                    conflictType: "RESOURCE_CONFLICT",
-                    reason: `Insufficient available labs for batch ${session.batch} (need ${group.length})`,
-                };
-            }
-            usedLabs.add(String(labChoice).toUpperCase().trim());
-            assignedLabs.push(labChoice);
+            assignedLabs.push({
+                labInitial: session.location,
+                status: session.labAssignedStatus || "MANUAL",
+                primaryLab: session.primaryLabInitial || session.location,
+                reason: "Pre-assigned location",
+            });
+            continue;
         }
+
+        // ── Case B: Course has a v5.5 lab resolution ─────────────────────────
+        const resolution = session.labResolution || null;
+        const primaryLab = session.primaryLabInitial || null;
+
+        if (resolution || primaryLab) {
+
+            // Try primary lab first
+            if (primaryLab && !usedLabs.has(primaryLab.toUpperCase()) &&
+                collegeOccupancy.isLabFreeForPractical(primaryLab, day, slot)) {
+                usedLabs.add(primaryLab.toUpperCase().trim());
+                assignedLabs.push({
+                    labInitial: primaryLab,
+                    status: "MAPPED",
+                    primaryLab,
+                    reason: `Primary mapped lab "${primaryLab}" available`,
+                });
+                continue;
+            }
+
+            // Try compatible fallback labs
+            const fallbacks = resolution?.fallbackOptions || [];
+            let fallbackFound = false;
+            for (const { labInitial, labName, score } of fallbacks) {
+                if (!usedLabs.has(labInitial.toUpperCase()) &&
+                    collegeOccupancy.isLabFreeForPractical(labInitial, day, slot)) {
+                    usedLabs.add(labInitial.toUpperCase().trim());
+                    assignedLabs.push({
+                        labInitial,
+                        status: "FALLBACK",
+                        primaryLab,
+                        fallbackLab: labInitial,
+                        reason: `Primary lab "${primaryLab}" unavailable; fallback "${labInitial}" (${labName}) assigned (score ${score})`,
+                    });
+                    fallbackFound = true;
+                    break;
+                }
+            }
+
+            if (fallbackFound) continue;
+
+            // No compatible lab available — RESOURCE_CONFLICT
+            const checkedLabs = primaryLab
+                ? [primaryLab, ...fallbacks.map((f) => f.labInitial)]
+                : fallbacks.map((f) => f.labInitial);
+            return {
+                valid: false,
+                assignedLabs: [],
+                conflictType: "RESOURCE_CONFLICT",
+                reason: `No compatible lab available for course "${session.subjectName || session.subject}" ` +
+                    `batch ${session.batch}. Checked: [${checkedLabs.join(", ")}]. ` +
+                    `Primary: ${primaryLab || "UNMAPPED"}. This is RESOURCE_UNRESOLVED — ` +
+                    `do not assign a random lab.`,
+            };
+        }
+
+        // ── Case C: Course with no explicit primary mapping ──────────────────
+        // Minimize NO LAB allocations: check if any general physical lab is available in slot
+        const baseLabs = collegeOccupancy.resources?.labs || [];
+        let altLabFound = false;
+        for (const lab of baseLabs) {
+            const labNorm = String(lab).toUpperCase().trim();
+            if (!usedLabs.has(labNorm) && collegeOccupancy.isLabFreeForPractical(lab, day, slot)) {
+                usedLabs.add(labNorm);
+                assignedLabs.push({
+                    labInitial: lab,
+                    status: "FALLBACK",
+                    primaryLab: lab,
+                    fallbackLab: lab,
+                    reason: `Alternative lab "${lab}" allocated to minimize unresolved practical allocation`,
+                });
+                altLabFound = true;
+                break;
+            }
+        }
+
+        if (altLabFound) continue;
+
+        // No physical lab available at all in this window — report conflict so another window is used
+        return {
+            valid: false,
+            assignedLabs: [],
+            conflictType: "RESOURCE_CONFLICT",
+            reason: `All physical labs occupied on ${day} slot ${slot + 1}.`,
+        };
     }
 
     return { valid: true, assignedLabs, conflictType: null, reason: null };
@@ -235,6 +370,12 @@ export function validateCandidateGroup(group, day, slot, collegeOccupancy, divKe
  *   2. DAPS / RCAA faculty and batch scarcity (constrained faculty first)
  */
 export function findBestPracticalStack(validCandidates, day, slot, collegeOccupancy, divKey, options = {}) {
+    const courseUnallocatedCounts = {};
+    validCandidates.forEach((s) => {
+        const cKey = (s.subject || s.subjectName || s.courseCode || "").toUpperCase().trim();
+        courseUnallocatedCounts[cKey] = (courseUnallocatedCounts[cKey] || 0) + 1;
+    });
+
     const maxTargetSize = Math.min(4, validCandidates.length);
     let selectedStack = null;
     let selectedAssignedLabs = null;
@@ -246,8 +387,18 @@ export function findBestPracticalStack(validCandidates, day, slot, collegeOccupa
         searchLogs.push(`${targetSize}`);
         searchLogs.push(``);
 
-        // Limit candidate subset to top 20 scarcity-sorted candidates if pool is very large
-        const candidateSubset = validCandidates.length > 20 ? validCandidates.slice(0, 20) : validCandidates;
+        // Sort subset candidates by course backlog first to ensure high-backlog courses are included in candidateSubset
+        const sortedSubsetCandidates = [...validCandidates].sort((a, b) => {
+            const cKeyA = (a.subject || a.subjectName || a.courseCode || "").toUpperCase().trim();
+            const cKeyB = (b.subject || b.subjectName || b.courseCode || "").toUpperCase().trim();
+            const backlogA = courseUnallocatedCounts[cKeyA] || 0;
+            const backlogB = courseUnallocatedCounts[cKeyB] || 0;
+            if (backlogA !== backlogB) return backlogB - backlogA; // high backlog first
+            return 0;
+        });
+
+        // Limit candidate subset to top 24 scarcity-sorted candidates if pool is very large
+        const candidateSubset = sortedSubsetCandidates.length > 24 ? sortedSubsetCandidates.slice(0, 24) : sortedSubsetCandidates;
         const combos = getCombinations(candidateSubset, targetSize);
         totalCombosChecked += combos.length;
 
@@ -261,7 +412,7 @@ export function findBestPracticalStack(validCandidates, day, slot, collegeOccupa
                     combo,
                     assignedLabs: validation.assignedLabs,
                     diversity: getCourseDiversity(combo),
-                    scarcity: getComboScarcityScore(combo, collegeOccupancy, divKey),
+                    scarcity: getComboScarcityScore(combo, collegeOccupancy, divKey, courseUnallocatedCounts),
                 });
             } else {
                 if (validation.conflictType) {
@@ -366,13 +517,23 @@ export function packPracticals(timetable, sessionPool, collegeOccupancy, options
 
     // Collect all unscheduled practical sessions
     const practicalSessions = sessionPool.filter((s) => s.type === "PRACTICAL" && !s.allocated);
-    if (practicalSessions.length === 0) {
+    // Collect paired tutorials for TY and BTECH (merged with lab window)
+    const pairedTutorials = sessionPool.filter(
+        (s) => s.type === "TUTORIAL" && s.pairedWithLab && !s.allocated
+    );
+
+    if (practicalSessions.length === 0 && pairedTutorials.length === 0) {
         return { packedCount: 0, unallocatedCount: 0, packingLogs };
     }
 
-    // Map practical sessions by division key
+    // Map practical sessions and paired tutorials by division key
     const divisionPracticalMap = {};
     practicalSessions.forEach((s) => {
+        const divKey = getDivisionKeyForSession(s, timetable);
+        if (!divisionPracticalMap[divKey]) divisionPracticalMap[divKey] = [];
+        divisionPracticalMap[divKey].push(s);
+    });
+    pairedTutorials.forEach((s) => {
         const divKey = getDivisionKeyForSession(s, timetable);
         if (!divisionPracticalMap[divKey]) divisionPracticalMap[divKey] = [];
         divisionPracticalMap[divKey].push(s);
@@ -388,96 +549,269 @@ export function packPracticals(timetable, sessionPool, collegeOccupancy, options
         });
     });
 
-    // Iterate through all practical windows
-    windowOrder.forEach(({ day, slot }) => {
-        // Prioritize divisions with more unallocated sessions
-        const sortedDivKeys = [...divisionKeys].sort((a, b) => {
-            const unallocA = divisionPracticalMap[a].filter((s) => !s.allocated).length;
-            const unallocB = divisionPracticalMap[b].filter((s) => !s.allocated).length;
-            return unallocB - unallocA;
-        });
+    // Track daily practical blocks committed per division to avoid over-packing a single day
+    const divDailyPracticalCount = {};
+    const getDivDailyCount = (divKey, day) => divDailyPracticalCount[`${divKey}_${day}`] || 0;
+    const incDivDailyCount = (divKey, day) => {
+        divDailyPracticalCount[`${divKey}_${day}`] = (divDailyPracticalCount[`${divKey}_${day}`] || 0) + 1;
+    };
 
-        sortedDivKeys.forEach((divKey) => {
-            const unallocatedInDiv = divisionPracticalMap[divKey].filter((s) => !s.allocated);
-            if (unallocatedInDiv.length === 0) return;
+    // Staged passes:
+    // Pass 1: Maximum parallel stacks (size >= 4), max 1 block per division per day
+    // Pass 2: Parallel stacks (size >= 3), max 1 block per division per day
+    // Pass 3: Pair stacks (size >= 2), max 1 block per division per day
+    // Pass 4: Clean up any remaining singles (size >= 1), max 1 block per division per day
+    const passes = [
+        { minStack: 4, maxPerDay: 1 },
+        { minStack: 3, maxPerDay: 1 },
+        { minStack: 2, maxPerDay: 1 },
+        { minStack: 1, maxPerDay: 1 },
+    ];
 
-            // Check if division window is free
-            if (!collegeOccupancy.isDivisionFreeForPractical(divKey, day, slot)) {
-                return;
-            }
 
-            // STEP 1: Collect candidates for this window across ALL courses
-            const candidates = unallocatedInDiv;
+    passes.forEach((pass) => {
+        windowOrder.forEach(({ day, slot }) => {
+            // Prioritize divisions with more unallocated sessions
+            const sortedDivKeys = [...divisionKeys].sort((a, b) => {
+                const unallocA = divisionPracticalMap[a].filter((s) => !s.allocated).length;
+                const unallocB = divisionPracticalMap[b].filter((s) => !s.allocated).length;
+                return unallocB - unallocA;
+            });
 
-            // STEP 2: Filter candidates that individually cannot use the window
-            const validCandidates = candidates.filter((session) => {
-                if (!collegeOccupancy.isFacultyFreeForPractical(session.faculty, day, slot)) {
-                    return false;
+            sortedDivKeys.forEach((divKey) => {
+                const unallocatedInDiv = divisionPracticalMap[divKey].filter((s) => !s.allocated);
+                if (unallocatedInDiv.length === 0) return;
+                if (getDivDailyCount(divKey, day) >= pass.maxPerDay) return;
+
+                // Check if division window is free
+                if (!collegeOccupancy.isDivisionFreeForPractical(divKey, day, slot)) {
+                    return;
                 }
-                if (!collegeOccupancy.isBatchFreeForPractical(session.batch, day, slot)) {
-                    return false;
-                }
-                if (collegeOccupancy.getBatchDailyPracticalCount(session.batch, day) >= 2) {
-                    return false;
-                }
-                if (session.location && session.location !== "TBD" && session.location !== "FIXED") {
-                    if (!collegeOccupancy.isLabFreeForPractical(session.location, day, slot)) {
+
+                // STEP 1: Collect candidates for this window across ALL courses
+                const candidates = unallocatedInDiv;
+
+                // STEP 2: Filter candidates that individually cannot use the window
+                const validCandidates = candidates.filter((session) => {
+                    if (!collegeOccupancy.isFacultyFreeForPractical(session.faculty, day, slot)) {
                         return false;
                     }
-                }
-                return true;
-            });
+                    if (!collegeOccupancy.isBatchFreeForPractical(session.batch, day, slot)) {
+                        return false;
+                    }
+                    if (collegeOccupancy.getBatchDailyPracticalCount(session.batch, day) >= 2) {
+                        return false;
+                    }
+                    if (session.location && session.location !== "TBD" && session.location !== "FIXED") {
+                        if (!collegeOccupancy.isLabFreeForPractical(session.location, day, slot)) {
+                            return false;
+                        }
+                    } else if (session.primaryLabInitial) {
+                        const primaryFree = collegeOccupancy.isLabFreeForPractical(session.primaryLabInitial, day, slot);
+                        if (!primaryFree) {
+                            const fallbacks = session.labResolution?.fallbackOptions || [];
+                            const anyFallbackFree = fallbacks.some((f) => collegeOccupancy.isLabFreeForPractical(f.labInitial, day, slot));
+                            if (!anyFallbackFree) return false;
+                        }
+                    }
+                    return true;
+                });
 
-            if (validCandidates.length === 0) return;
+                if (validCandidates.length < pass.minStack) return;
 
-            // STEP 3: Sort valid candidates by scarcity
-            validCandidates.sort((a, b) => {
-                const facScarcityA = collegeOccupancy.calculateFacultyPracticalScarcity(a.faculty);
-                const facScarcityB = collegeOccupancy.calculateFacultyPracticalScarcity(b.faculty);
-                if (facScarcityA !== facScarcityB) return facScarcityA - facScarcityB;
+                // STEP 3: Sort valid candidates by scarcity
+                validCandidates.sort((a, b) => {
+                    const facScarcityA = collegeOccupancy.calculateFacultyPracticalScarcity(a.faculty);
+                    const facScarcityB = collegeOccupancy.calculateFacultyPracticalScarcity(b.faculty);
+                    if (facScarcityA !== facScarcityB) return facScarcityA - facScarcityB;
 
-                const batchScarcityA = collegeOccupancy.calculateBatchPracticalScarcity(a.batch, divKey);
-                const batchScarcityB = collegeOccupancy.calculateBatchPracticalScarcity(b.batch, divKey);
-                if (batchScarcityA !== batchScarcityB) return batchScarcityA - batchScarcityB;
+                    const batchScarcityA = collegeOccupancy.calculateBatchPracticalScarcity(a.batch, divKey);
+                    const batchScarcityB = collegeOccupancy.calculateBatchPracticalScarcity(b.batch, divKey);
+                    if (batchScarcityA !== batchScarcityB) return batchScarcityA - batchScarcityB;
 
-                const pA = a.priorityScore || 0;
-                const pB = b.priorityScore || 0;
-                return pB - pA;
-            });
+                    const pA = a.priorityScore || 0;
+                    const pB = b.priorityScore || 0;
+                    return pB - pA;
+                });
 
-            // STEP 4: Maximum Parallel Practical Stacking: 4 → 3 → 2 → 1 with cross-course preference
-            const stackResult = findBestPracticalStack(
-                validCandidates,
-                day,
-                slot,
-                collegeOccupancy,
-                divKey,
-                options
-            );
-
-            // Record debug log
-            const logHeader = [
-                `[PracticalStacking]`,
-                ``,
-                `Window:`,
-                `${day} L${slot + 1}-L${slot + 2}`,
-                ``,
-                `Total candidates:`,
-                `${candidates.length}`,
-                ``,
-            ];
-            const fullLog = [...logHeader, ...stackResult.searchLogs].join("\n");
-            log(fullLog);
-
-            // STEP 5: Commit atomically
-            if (stackResult.selectedStack && stackResult.selectedAssignedLabs) {
-                collegeOccupancy.commitPracticalGroup(
-                    divKey,
+                // STEP 4: Maximum Parallel Practical Stacking: 4 → 3 → 2 → 1 with cross-course preference
+                const stackResult = findBestPracticalStack(
+                    validCandidates,
                     day,
                     slot,
-                    stackResult.selectedStack,
-                    stackResult.selectedAssignedLabs
+                    collegeOccupancy,
+                    divKey,
+                    options
                 );
+
+                // Record debug log
+                const logHeader = [
+                    `[PracticalStacking]`,
+                    ``,
+                    `Window:`,
+                    `${day} L${slot + 1}-L${slot + 2}`,
+                    ``,
+                    `Total candidates:`,
+                    `${candidates.length}`,
+                    ``,
+                ];
+                const fullLog = [...logHeader, ...stackResult.searchLogs].join("\n");
+                log(fullLog);
+
+                // STEP 5: Commit atomically if stack meets minimum threshold for this pass.
+                // When 4 or more sessions remain unallocated in this division, require a full 4-stack
+                // so partial stacks do not burn the division's daily practical quota and starve remaining batches.
+                const requiredMinStack = unallocatedInDiv.length >= 4 ? 4 : pass.minStack;
+                if (stackResult.selectedStack && stackResult.selectedStack.length >= requiredMinStack && stackResult.selectedAssignedLabs) {
+                    collegeOccupancy.commitPracticalGroup(
+                        divKey,
+                        day,
+                        slot,
+                        stackResult.selectedStack,
+                        stackResult.selectedAssignedLabs
+                    );
+                    incDivDailyCount(divKey, day);
+                }
+            });
+        });
+    });
+
+    // ── Pass 5b: Post-pass embedding for any remaining practical sessions ────
+    divisionKeys.forEach((divKey) => {
+        const remainingPracs = (divisionPracticalMap[divKey] || []).filter(
+            (s) => s.type === "PRACTICAL" && !s.allocated
+        );
+        if (remainingPracs.length === 0) return;
+
+        remainingPracs.forEach((pracSession) => {
+            if (pracSession.allocated) return;
+            for (const { day, slot } of windowOrder) {
+                const cell = timetable[divKey]?.[day]?.[slot];
+                if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2 || cell.fixed || cell.isGlobal) continue;
+                if (!cell.batchAllocations) cell.batchAllocations = [];
+
+                // Max 4 batches total per practical cell
+                const totalInCell = (cell.batchAllocations || []).length + (cell.tutorialAllocations || []).length;
+                if (totalInCell >= 4) continue;
+
+                // Check batch is not already in practical or tutorial in this cell
+                const practicalBatches = (cell.batchAllocations || []).map((b) => b.batch);
+                const tutorialBatches = (cell.tutorialAllocations || []).map((t) => t.batch);
+                if (practicalBatches.includes(pracSession.batch) || tutorialBatches.includes(pracSession.batch)) continue;
+
+                // STRICT: Each batch must have a distinct faculty. Same faculty cannot teach multiple batches in this slot!
+                const existingFaculties = (cell.batchAllocations || []).map((b) => b.faculty).filter(isRealFaculty);
+                if (isRealFaculty(pracSession.faculty) && existingFaculties.includes(pracSession.faculty)) continue;
+
+                // Check faculty is free
+                if (!collegeOccupancy.isFacultyFreeForPractical(pracSession.faculty, day, slot)) continue;
+                if (!collegeOccupancy.isBatchFreeForPractical(pracSession.batch, day, slot)) continue;
+
+                // Find available compatible lab
+                const primaryLab = pracSession.primaryLabInitial;
+                const resolution = pracSession.labResolution;
+                let assignedLab = null;
+
+                if (primaryLab && collegeOccupancy.isLabFreeForPractical(primaryLab, day, slot)) {
+                    assignedLab = primaryLab;
+                } else if (resolution?.fallbackOptions) {
+                    for (const { labInitial } of resolution.fallbackOptions) {
+                        if (collegeOccupancy.isLabFreeForPractical(labInitial, day, slot)) {
+                            assignedLab = labInitial;
+                            break;
+                        }
+                    }
+                } else {
+                    const baseLabs = collegeOccupancy.resources?.labs || [];
+                    for (const lab of baseLabs) {
+                        if (collegeOccupancy.isLabFreeForPractical(lab, day, slot)) {
+                            assignedLab = lab;
+                            break;
+                        }
+                    }
+                }
+
+                if (!assignedLab) continue;
+
+                const tail = timetable[divKey]?.[day]?.[slot + 1];
+                const allocEntry = {
+                    ...pracSession,
+                    location: assignedLab,
+                    allocated: true,
+                    labAssignedInitial: assignedLab,
+                };
+
+                cell.batchAllocations.push(allocEntry);
+                if (tail) tail.batchAllocations = cell.batchAllocations;
+
+                collegeOccupancy.markFacultyOccupied(pracSession.faculty, day, slot, pracSession);
+                collegeOccupancy.markFacultyOccupied(pracSession.faculty, day, slot + 1, pracSession);
+                collegeOccupancy.markBatchOccupied(pracSession.batch, day, slot, pracSession);
+                collegeOccupancy.markBatchOccupied(pracSession.batch, day, slot + 1, pracSession);
+                collegeOccupancy.markLabOccupied(assignedLab, day, slot, pracSession);
+                collegeOccupancy.markLabOccupied(assignedLab, day, slot + 1, pracSession);
+
+                pracSession.allocated = true;
+                pracSession.location = assignedLab;
+                break;
+            }
+        });
+    });
+
+    // ── Pass 6: Post-pass embedding for any remaining paired tutorials ────
+    divisionKeys.forEach((divKey) => {
+        const remainingTuts = (divisionPracticalMap[divKey] || []).filter(
+            (s) => s.type === "TUTORIAL" && s.pairedWithLab && !s.allocated
+        );
+        if (remainingTuts.length === 0) return;
+
+        remainingTuts.forEach((tutSession) => {
+            if (tutSession.allocated) return;
+            for (const { day, slot } of windowOrder) {
+                const cell = timetable[divKey]?.[day]?.[slot];
+                if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2 || cell.fixed || cell.isGlobal) continue;
+
+                // Check batch is not already in practical or tutorial in this cell
+                const practicalBatches = (cell.batchAllocations || []).map((b) => b.batch);
+                const tutorialBatches = (cell.tutorialAllocations || []).map((t) => t.batch);
+                if (practicalBatches.includes(tutSession.batch) || tutorialBatches.includes(tutSession.batch)) continue;
+
+                // Check faculty is free
+                if (!collegeOccupancy.isFacultyFreeForPractical(tutSession.faculty, day, slot)) continue;
+
+                // Find free tutorial room / classroom
+                const baseTR = collegeOccupancy.resources?.tutorialRooms || ["TR1", "TR2"];
+                const baseCR = collegeOccupancy.resources?.classrooms || ["C1", "C2", "C3", "C4", "C5", "C6"];
+                let room = baseTR.find((tr) => collegeOccupancy.isTutorialRoomFreeForPractical(tr, day, slot));
+                if (!room) {
+                    room = baseCR.find((cr) => collegeOccupancy.isClassroomFreeForPractical(cr, day, slot));
+                }
+                if (!room) room = baseTR[0] || "TR1";
+
+                if (!cell.tutorialAllocations) cell.tutorialAllocations = [];
+                const tail = timetable[divKey]?.[day]?.[slot + 1];
+                if (tail && !tail.tutorialAllocations) tail.tutorialAllocations = [];
+
+                const tutEntry = {
+                    ...tutSession,
+                    location: room,
+                    resourceType: "TUTORIAL_ROOM",
+                    embeddedInLab: true,
+                    labSubSlot: slot,
+                };
+
+                cell.tutorialAllocations.push(tutEntry);
+                if (tail) tail.tutorialAllocations = cell.tutorialAllocations;
+
+                collegeOccupancy.markFacultyOccupied(tutSession.faculty, day, slot, tutSession);
+                collegeOccupancy.markFacultyOccupied(tutSession.faculty, day, slot + 1, tutSession);
+                collegeOccupancy.markBatchOccupied(tutSession.batch, day, slot, tutSession);
+                collegeOccupancy.markBatchOccupied(tutSession.batch, day, slot + 1, tutSession);
+                collegeOccupancy.markTutorialRoomOccupied(room, day, slot, tutSession);
+                collegeOccupancy.markTutorialRoomOccupied(room, day, slot + 1, tutSession);
+
+                tutSession.allocated = true;
+                break;
             }
         });
     });

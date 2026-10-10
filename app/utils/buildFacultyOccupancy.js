@@ -55,7 +55,11 @@ export const MAX_CONSECUTIVE_LECTURES = 3;
 const GHOST_FACULTIES = new Set(["TBD", "FIXED", "TBD-FACULTY", "DEPT-FACULTY", ""]);
 
 function isRealFaculty(faculty) {
-    return faculty && !GHOST_FACULTIES.has(String(faculty).trim());
+    if (!faculty) return false;
+    const str = String(faculty).trim().toUpperCase();
+    if (GHOST_FACULTIES.has(str)) return false;
+    if (/^[XYZ]\d+$/i.test(str) || str.startsWith("EXT")) return false;
+    return true;
 }
 
 /**

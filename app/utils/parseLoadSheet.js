@@ -1,16 +1,57 @@
 export function parseLoadSheet(rows) {
     const subjects = [];
 
+    // Auto-detect base column offset: some spreadsheets start data at col A (0),
+    // others at col B (1). Scan rows for the first year header to determine offset.
+    let baseCol = 0;
+    for (const row of rows) {
+        for (let c = 0; c <= 2; c++) {
+            const cellVal = String(row[c] || "").trim();
+            if (cellVal && normalizeYearHeader(cellVal)) {
+                baseCol = c;
+                break;
+            }
+        }
+        if (baseCol > 0) break;
+        // Also check if the first non-empty cell in a data row starts at col 1+
+        // by looking for the "L" header label
+        for (let c = 1; c <= 2; c++) {
+            const cellVal = String(row[c] || "").trim();
+            if (cellVal === "L" || normalizeYearHeader(cellVal)) {
+                // If "L" header is at col c, then course name is at col c-1... unless c-1 is the year.
+                // Actually if "L" is at col c and col c-1 has year header, base = c-1
+                // If "L" is at col 2 and col 1 has a year header, base = 1
+                // Simplify: check if col c has "L" and col c-1 has a year
+                const prevVal = String(row[c - 1] || "").trim();
+                if (normalizeYearHeader(prevVal)) {
+                    baseCol = c - 1;
+                }
+                break;
+            }
+        }
+        if (baseCol > 0) break;
+    }
+
     let currentYear = "";
+    let currentBatchColOffset = 7; // default: col 8 for Batch 1 (offset 7 + 1 = 8)
 
     rows.forEach((row) => {
-        const col0 = String(row[0] || "").trim();
-        const col1 = row[1];
+        const courseName = String(row[baseCol] || "").trim();
+        const lVal = row[baseCol + 1];
 
         // Detect ONLY valid year headers
-        const normalizedYear = normalizeYearHeader(col0);
+        const normalizedYear = normalizeYearHeader(courseName);
         if (normalizedYear) {
             currentYear = normalizedYear;
+            // Scan for column containing "1" to detect batch column start dynamically
+            currentBatchColOffset = baseCol + 7;
+            for (let c = baseCol + 4; c < row.length; c++) {
+                const val = Number(row[c]);
+                if (val === 1 || String(row[c]).trim() === "1") {
+                    currentBatchColOffset = c - 1;
+                    break;
+                }
+            }
             return;
         }
 
@@ -24,30 +65,29 @@ export function parseLoadSheet(rows) {
             return;
         }
 
-        // Subject row: col0 is a course name, col1 is a numeric L value (> 0 or explicitly 0)
-        // Skip rows where col1 is empty or non-numeric text like "L", "T", "P"
-        const col1Str = String(col1 ?? "").trim();
+        // Subject row: courseName is a course name, lVal is a numeric L value (> 0 or explicitly 0)
+        // Skip rows where lVal is empty or non-numeric text like "L", "T", "P"
+        const lValStr = String(lVal ?? "").trim();
         if (
-            col0 &&
-            col1Str !== "" &&
-            !isNaN(Number(col1Str))
+            courseName &&
+            lValStr !== "" &&
+            !isNaN(Number(lValStr))
         ) {
 
             const facultyA =
-                String(row[4] || "").trim();
+                String(row[baseCol + 4] || "").trim();
 
             const facultyB =
-                String(row[5] || "").trim();
+                String(row[baseCol + 5] || "").trim();
 
             const facultyC =
-                String(row[6] || "").trim();
+                String(row[baseCol + 6] || "").trim();
 
             const maxBatches = currentYear === "BTECH" ? 8 : 12;
             const batches = {};
             for (let b = 1; b <= maxBatches; b++) {
-                // Batch faculty columns start right after the 3 division columns (cols 4,5,6).
-                // Batch 1 → col 7, Batch 2 → col 8, ..., Batch N → col (6 + N)
-                const batchFaculty = String(row[6 + b] || "").trim();
+                const colIdx = currentBatchColOffset + b;
+                const batchFaculty = String(row[colIdx] || "").trim();
                 if (batchFaculty && batchFaculty !== "-") {
                     batches[b] = batchFaculty;
                 }
@@ -56,11 +96,11 @@ export function parseLoadSheet(rows) {
             subjects.push({
                 year: currentYear,
 
-                courseName: col0,
+                courseName: courseName,
 
-                L: Number(row[1]) || 0,
-                T: Number(row[2]) || 0,
-                P: Number(row[3]) || 0,
+                L: Number(row[baseCol + 1]) || 0,
+                T: Number(row[baseCol + 2]) || 0,
+                P: Number(row[baseCol + 3]) || 0,
 
                 divisions: {
                     A: facultyA,

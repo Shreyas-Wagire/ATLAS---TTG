@@ -1,5 +1,5 @@
-import { isSubjectMatch, isAptitudeSubject } from "./normalizeSubjectName";
-import { normalizeYearHeader } from "./parseLoadSheet";
+import { isSubjectMatch, isAptitudeSubject } from "./normalizeSubjectName.js";
+import { normalizeYearHeader } from "./parseLoadSheet.js";
 
 export function applyFixedConstraints(timetable, globalConstraints) {
     const dayMap = {
@@ -132,6 +132,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
                         isGlobal: true,
+                        isSync: true,
                         span: 2,
                         day: constraint.day,
                         time: constraint.time,
@@ -144,6 +145,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
                         isGlobal: true,
+                        isSync: true,
                         span: 0,
                         day: constraint.day,
                         time: constraint.time,
@@ -157,6 +159,7 @@ export function applyFixedConstraints(timetable, globalConstraints) {
                         faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
                         fixed: true,
                         isGlobal: true,
+                        isSync: true,
                         span: 1,
                         day: constraint.day,
                         time: constraint.time,

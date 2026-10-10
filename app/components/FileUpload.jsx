@@ -3,19 +3,23 @@
 import React, { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Upload, Sliders, PlayCircle, Grid, BarChart3, ChevronRight, ChevronLeft, 
-    Sparkles, CheckCircle2, FileSpreadsheet, Layers, ShieldCheck, Zap, 
+import {
+    Upload, Sliders, PlayCircle, Grid, BarChart3, ChevronRight, ChevronLeft,
+    Sparkles, CheckCircle2, FileSpreadsheet, Layers, ShieldCheck, Zap,
     BookOpen, Users, MapPin, Globe, Link2, UserCheck, GraduationCap, Building2, Loader2
 } from "lucide-react";
 
 import { parseGlobalConstraints } from "../utils/parseGlobalConstraints";
-import { parseResourcesSheet } from "../utils/parseResourcesSheet";
+import { parseResourcesSheet, buildResourcesFromLocation } from "../utils/parseResourcesSheet";
 import { parseLoadSheet } from "../utils/parseLoadSheet";
 import { buildYearWiseData } from "../utils/buildYearWiseData";
 import { parseSyncConstraints, autoDetectSyncConstraints } from "../utils/parseSyncConstraints";
 import { parseFacultyConstraints } from "../utils/parseFacultyConstraints";
 import { generateSmartTimetable } from "../utils/generateSmartTimetable";
+import { generateFacultyTimetable } from "../utils/generateFacultyTimetable";
+import { generateLocationTimetable } from "../utils/generateLocationTimetable";
+import { parseLocationSheet } from "../utils/parseLocationSheet";
+import { generateResourceResolutionPreview } from "../utils/courseLabResolver";
 
 import HomePage from "./HomePage";
 import YearWiseCourses from "./YearWiseCourses";
@@ -72,6 +76,9 @@ export default function FileUpload() {
     const [validationScore, setValidationScore] = useState(null);
     const [optimizationReport, setOptimizationReport] = useState(null);
     const [facultyConstraints, setFacultyConstraints] = useState([]);
+    // v5.5: Resource resolution preview (course → lab mapping table)
+    const [resourceResolutionPreview, setResourceResolutionPreview] = useState([]);
+    const [locationData, setLocationData] = useState(null);
 
     // Multi-Step Stage State
     const [activeStep, setActiveStep] = useState(1);
@@ -105,6 +112,8 @@ export default function FileUpload() {
         setValidationScore(null);
         setOptimizationReport(null);
         setFacultyConstraints([]);
+        setResourceResolutionPreview([]);
+        setLocationData(null);
         setActiveStep(1);
     };
 
@@ -120,8 +129,12 @@ export default function FileUpload() {
             setConflictReport(semester.conflictReport || null);
             setFacultyWorkloadReport(semester.facultyWorkloadReport || null);
             setResourceUtilizationReport(semester.resourceUtilizationReport || null);
-            setFacultyTimetable(semester.facultyTimetable || null);
-            setLocationTimetable(semester.locationTimetable || null);
+            setFacultyTimetable(
+                semester.facultyTimetable || (semester.timetable ? generateFacultyTimetable(semester.timetable) : null)
+            );
+            setLocationTimetable(
+                semester.locationTimetable || (semester.timetable ? generateLocationTimetable(semester.timetable) : null)
+            );
             setValidationScore(semester.validationScore || null);
             setOptimizationReport(semester.optimizationReport || null);
             setYearWiseData(semester.yearWiseData || {});
@@ -146,7 +159,8 @@ export default function FileUpload() {
         targetGroupedData = yearWiseData,
         targetGlobalConstraints = globalConstraints,
         targetSyncRules = syncRules,
-        targetResources = resources
+        targetResources = resources,
+        targetSubjects = subjects
     ) => {
         if (!targetGroupedData || Object.keys(targetGroupedData).length === 0) return;
 
@@ -154,13 +168,16 @@ export default function FileUpload() {
 
         setTimeout(() => {
             const facultyAvailability = parseFacultyConstraints(facultyConstraints);
+            // v5.5: Pass loadSubjects so generateSmartTimetable can build
+            // courseLabResolutions from LOAD + Location data.
             const result = generateSmartTimetable(
                 targetGroupedData,
                 targetGlobalConstraints,
                 targetSyncRules,
                 targetResources,
                 30,
-                facultyAvailability
+                facultyAvailability,
+                targetSubjects  // loadSubjects for v5.5 course-aware lab resolution
             );
 
             setGenerationReport(result.report);
@@ -172,8 +189,12 @@ export default function FileUpload() {
             setLocationTimetable(result.locationTimetable || null);
             setValidationScore(result.validationScore || null);
             setOptimizationReport(result.optimizationReport || null);
+            // v5.5: Store resource resolution preview for display
+            if (result.resourceResolutionPreview) {
+                setResourceResolutionPreview(result.resourceResolutionPreview);
+            }
 
-            // Auto-save to active semester workspace
+            // Auto-save to active semester workspace (compacted payload)
             if (activeSemester?.id) {
                 saveSemester(activeSemester.id, {
                     timetable: result.timetable,
@@ -181,8 +202,6 @@ export default function FileUpload() {
                     conflictReport: result.conflictReport || null,
                     facultyWorkloadReport: result.facultyWorkloadReport || null,
                     resourceUtilizationReport: result.resourceUtilizationReport || null,
-                    facultyTimetable: result.facultyTimetable || null,
-                    locationTimetable: result.locationTimetable || null,
                     validationScore: result.validationScore || null,
                     optimizationReport: result.optimizationReport || null,
                     yearWiseData: targetGroupedData,
@@ -225,19 +244,32 @@ export default function FileUpload() {
             setSheets(allSheets);
             setSelectedSheet(workbook.SheetNames[0]);
 
+            // Resolve sheets by standard name or position
+            const loadSheetKey = workbook.SheetNames.find((n) => /^load|^sheet1/i.test(n)) || workbook.SheetNames[0];
+            const fixSheetKey = workbook.SheetNames.find((n) => /^fix|^global/i.test(n)) || workbook.SheetNames[1];
+            const locationSheetKey = workbook.SheetNames.find((n) => /^location|^resource|^sheet2/i.test(n)) || workbook.SheetNames[2];
+
+            const loadSheet = allSheets[loadSheetKey] || allSheets[workbook.SheetNames[0]] || [];
+            const globalConstraintSheet = allSheets[fixSheetKey] || allSheets[workbook.SheetNames[1]] || [];
+            // v5.5: Sheet named Location or sheet index 2 is the Location sheet (Tutorial Rooms, ClassRooms, Lab Name, Initial, Features, Mapped Courses)
+            const locationSheet = allSheets[locationSheetKey] || allSheets[workbook.SheetNames[2]] || [];
+
             // Sheet Detection Checklist
             setDetectedSheets({
-                loadSheet: Boolean(allSheets[workbook.SheetNames[0]]),
-                constraintsSheet: Boolean(allSheets[workbook.SheetNames[1]]),
-                resourcesSheet: Boolean(allSheets[workbook.SheetNames[2]]),
+                loadSheet: Boolean(loadSheet && loadSheet.length > 0),
+                constraintsSheet: Boolean(globalConstraintSheet && globalConstraintSheet.length > 0),
+                resourcesSheet: Boolean(locationSheet && locationSheet.length > 0),
                 syncSheet: Boolean(allSheets["SYNC_CONSTRAINTS"] || allSheets[workbook.SheetNames[3]]),
             });
 
-            const loadSheet = allSheets[workbook.SheetNames[0]] || [];
-            const globalConstraintSheet = allSheets[workbook.SheetNames[1]] || [];
-            const resourceSheet = allSheets[workbook.SheetNames[2]] || [];
+            // v5.5: Parse Location sheet for course-aware lab mapping
+            const parsedLocationData = parseLocationSheet(locationSheet);
+            setLocationData(parsedLocationData);
 
-            const parsedResources = parseResourcesSheet(resourceSheet);
+            // Build resources with lab initials from Location sheet.
+            // If Location sheet has no labs, fall back to legacy resource parsing.
+            const legacyResources = parseResourcesSheet(locationSheet);
+            const parsedResources = buildResourcesFromLocation(legacyResources, parsedLocationData);
             setResources(parsedResources);
 
             const parsedSubjects = parseLoadSheet(loadSheet);
@@ -255,7 +287,7 @@ export default function FileUpload() {
             const activeRules = [...parsedSyncConstraints, ...autoDetectedSync];
             setSyncRules(activeRules);
 
-            runTimetableGeneration(groupedData, parsedConstraints, activeRules, parsedResources);
+            runTimetableGeneration(groupedData, parsedConstraints, activeRules, parsedResources, parsedSubjects);
             setActiveStep(2); // Auto advance to Configuration Step
             setActiveView("studio");
         };

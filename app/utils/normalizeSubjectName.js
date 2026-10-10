@@ -103,14 +103,18 @@ export function isSubjectMatch(nameA, nameB) {
         if (aMatches && bMatches) return true;
     }
 
-    // Check Initials Match (e.g. DM vs Discrete Mathematics)
+    // Check Initials Match (e.g. DM vs Discrete Mathematics) - require at least 2 chars
     const initA = getSubjectInitials(nameA);
     const initB = getSubjectInitials(nameB);
 
-    if (initA === normB || initB === normA || initA === initB) return true;
+    if (initA && normB && initA.length >= 2 && normB.length >= 2 && initA === normB) return true;
+    if (initB && normA && initB.length >= 2 && normA.length >= 2 && initB === normA) return true;
+    if (initA && initB && initA.length >= 2 && initB.length >= 2 && initA === initB) return true;
 
-    // Check Substring / Contains Match
-    if (normA.includes(normB) || normB.includes(normA)) return true;
+    // Check Substring / Contains Match - only if both strings are at least 4 characters long
+    if (normA.length >= 4 && normB.length >= 4) {
+        if (normA.includes(normB) || normB.includes(normA)) return true;
+    }
 
     return false;
 }

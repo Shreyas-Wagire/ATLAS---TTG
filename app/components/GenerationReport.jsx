@@ -24,11 +24,13 @@ export default function GenerationReport({
 
     // Show 2-second popup when unallocated backlog is 0 (must be before early return)
     useEffect(() => {
-        if (missingCount === 0) {
-            setShowZeroBacklogPopup(true);
-            const timer = setTimeout(() => setShowZeroBacklogPopup(false), 2000);
-            return () => clearTimeout(timer);
-        }
+        if (missingCount !== 0) return undefined;
+        const showTimer = setTimeout(() => setShowZeroBacklogPopup(true), 0);
+        const hideTimer = setTimeout(() => setShowZeroBacklogPopup(false), 2000);
+        return () => {
+            clearTimeout(showTimer);
+            clearTimeout(hideTimer);
+        };
     }, [missingCount]);
 
     if (!report) return null;
@@ -293,7 +295,7 @@ export default function GenerationReport({
                                                     {session.faculty || "Prof. Assigned"}
                                                 </td>
                                                 <td className="p-3 text-[#64748b] font-medium leading-tight">
-                                                    Faculty schedule tight or classroom capacity reached in slot. Try relaxing global constraints or adding an alternate room.
+                                                    {session.diagnosticReason || session.rejectionReasons?.[0] || "Faculty schedule tight or classroom capacity reached in slot. Try relaxing global constraints or adding an alternate room."}
                                                 </td>
                                             </tr>
                                         ))}

@@ -1,4 +1,6 @@
-import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints";
+import { isFacultyBlockedByAvailability } from "./parseFacultyConstraints.js";
+import { checkLectureDistribution } from "./checkLectureDistribution.js";
+import { checkSubjectConstraint } from "./checkSubjectConstraint.js";
 
 export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule, facultyAvailability = {}) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -43,6 +45,9 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
                 const day = days[dayIdx];
                 for (let slot = 0; slot < 6; slot++) {
                     if (classTable[day][slot] === null && !isFacultyBusy(lecture.faculty, day, slot)) {
+                        if (!checkLectureDistribution({ timetable, divisionKey: timetableKey, day, session: lecture })) continue;
+                        if (!checkSubjectConstraint({ timetable, divisionKey: timetableKey, day, slot, session: lecture })) continue;
+
                         classTable[day][slot] = {
                             ...lecture,
                             fixed: false,
@@ -90,6 +95,14 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
 
                                 // Can targetFaculty move to occupiedDay & occupiedSlot?
                                 if (!isFacultyBusy(targetFaculty, occupiedDay, occupiedSlot)) {
+                                    // Check that target lecture does not violate daily course distribution or consecutive rule on occupiedDay
+                                    if (!checkLectureDistribution({ timetable, divisionKey: timetableKey, day: occupiedDay, session: lecture })) continue;
+                                    if (!checkSubjectConstraint({ timetable, divisionKey: timetableKey, day: occupiedDay, slot: occupiedSlot, session: lecture })) continue;
+
+                                    // Check that candidateCell moving to empty.day does not violate distribution or consecutive rule
+                                    if (empty.day !== occupiedDay && !checkLectureDistribution({ timetable, divisionKey: timetableKey, day: empty.day, session: candidateCell })) continue;
+                                    if (!checkSubjectConstraint({ timetable, divisionKey: timetableKey, day: empty.day, slot: empty.slot, session: candidateCell })) continue;
+
                                     // Can existingFaculty move to empty.day & empty.slot?
                                     unmarkFacultyBusy(existingFaculty, occupiedDay, occupiedSlot);
 
@@ -125,6 +138,9 @@ export function smartHumanBrainScheduler(timetable, sessionPool, facultySchedule
                     const day = days[d];
                     for (let s = 0; s < 6; s++) {
                         if (classTable[day][s] === null) {
+                            if (!checkLectureDistribution({ timetable, divisionKey: timetableKey, day, session: lecture })) continue;
+                            if (!checkSubjectConstraint({ timetable, divisionKey: timetableKey, day, slot: s, session: lecture })) continue;
+
                             const backupFaculty = "DEPT-FACULTY";
                             classTable[day][s] = {
                                 ...lecture,

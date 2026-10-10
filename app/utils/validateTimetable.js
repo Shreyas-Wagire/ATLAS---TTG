@@ -75,15 +75,37 @@ export function validateTimetable(timetable, sessionPool, resources = {}) {
                             });
                         }
                     });
+                    // Also check embedded tutorial allocations (TY/BTECH lab-merged tutorials)
+                    if (cell.tutorialAllocations) {
+                        const seenTutBatches = new Set();
+                        cell.tutorialAllocations.forEach((tutAlloc) => {
+                            if (seenTutBatches.has(tutAlloc.batch)) return;
+                            seenTutBatches.add(tutAlloc.batch);
+                            if (!tutAlloc.location) {
+                                resourceShortages.push({
+                                    timetableKey,
+                                    day,
+                                    slot: slotIdx,
+                                    session: tutAlloc,
+                                    reason: "No tutorial room assigned for lab-merged tutorial",
+                                });
+                            }
+                        });
+                    }
                 } else if (cell.type && !cell.location) {
-                    resourceShortages.push({
-                        timetableKey,
-                        day,
-                        slot: slotIdx,
-                        session: cell,
-                        reason: "No classroom assigned",
-                    });
+                    if (cell.span === 0 && slotIdx > 0 && slots[slotIdx - 1]?.location) {
+                        cell.location = slots[slotIdx - 1].location;
+                    } else {
+                        resourceShortages.push({
+                            timetableKey,
+                            day,
+                            slot: slotIdx,
+                            session: cell,
+                            reason: "No classroom assigned",
+                        });
+                    }
                 }
+
             });
         });
     });

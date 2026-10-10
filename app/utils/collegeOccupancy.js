@@ -21,7 +21,12 @@ const SLOTS_PER_DAY = 6;
 const GHOST_FACULTIES = new Set(["TBD", "FIXED", "TBD-FACULTY", "DEPT-FACULTY", ""]);
 
 export function isRealFaculty(f) {
-    return f && !GHOST_FACULTIES.has(String(f).trim());
+    if (!f) return false;
+    const str = String(f).trim().toUpperCase();
+    if (GHOST_FACULTIES.has(str)) return false;
+    // Common placeholder codes: X1, X2, Y1, Y2, Z1, Z2, EXT, EXTERNAL
+    if (/^[XYZ]\d+$/i.test(str) || str.startsWith("EXT")) return false;
+    return true;
 }
 
 export class CollegeOccupancy {
@@ -291,6 +296,26 @@ export class CollegeOccupancy {
         });
     }
 
+    isClassroomFree(room, day, slot) {
+        if (!room || room === "TBD") return true;
+        const norm = String(room).toUpperCase().trim();
+        return !this.classroomOccupancy[norm]?.[day]?.[slot];
+    }
+
+    isClassroomFreeForPractical(room, day, slot) {
+        return this.isClassroomFree(room, day, slot) && this.isClassroomFree(room, day, slot + 1);
+    }
+
+    isTutorialRoomFree(room, day, slot) {
+        if (!room || room === "TBD") return true;
+        const norm = String(room).toUpperCase().trim();
+        return !this.tutorialRoomOccupancy[norm]?.[day]?.[slot];
+    }
+
+    isTutorialRoomFreeForPractical(room, day, slot) {
+        return this.isTutorialRoomFree(room, day, slot) && this.isTutorialRoomFree(room, day, slot + 1);
+    }
+
     // ─── DETERMINISTIC SCARCITY CALCULATORS ───────────────────────────────────
 
     /**
@@ -339,23 +364,64 @@ export class CollegeOccupancy {
     commitPracticalGroup(divKey, day, slot, batchSessions, assignedLabs = []) {
         if (!this.timetable[divKey]?.[day]) return false;
 
-        const allocations = batchSessions.map((session, idx) => ({
-            ...session,
-            location: assignedLabs[idx] || session.location || "",
-        }));
+        // v5.5: assignedLabs can be either:
+        //   - Plain strings (legacy): "GEL"
+        //   - Lab assignment objects: { labInitial, status, primaryLab, reason }
+        const resolveLabInfo = (labValue, idx) => {
+            if (!labValue) return { labInitial: null, status: "UNRESOLVED", primaryLab: null, reason: "No lab assigned" };
+            if (typeof labValue === "string") {
+                return { labInitial: labValue, status: "MAPPED", primaryLab: labValue, reason: "Legacy assignment" };
+            }
+            return {
+                labInitial: labValue.labInitial || null,
+                status:     labValue.status     || "MAPPED",
+                primaryLab: labValue.primaryLab || labValue.labInitial || null,
+                fallbackLab: labValue.fallbackLab || null,
+                isTutorial: labValue.isTutorial || false,
+                reason:     labValue.reason     || "",
+            };
+        };
+
+        const practicalAllocations = [];
+        const tutorialAllocations = [];
+
+        batchSessions.forEach((session, idx) => {
+            const labInfo = resolveLabInfo(assignedLabs[idx], idx);
+            if (session.type === "TUTORIAL") {
+                tutorialAllocations.push({
+                    ...session,
+                    location: labInfo.labInitial || "",
+                    resourceType: "TUTORIAL_ROOM",
+                    embeddedInLab: true,
+                    labSubSlot: slot,
+                });
+            } else {
+                practicalAllocations.push({
+                    ...session,
+                    location:         labInfo.labInitial || "",
+                    labAssignedInitial: labInfo.labInitial,
+                    labAssignedStatus:  labInfo.status,
+                    primaryLabInitial:  labInfo.primaryLab || session.primaryLabInitial,
+                    fallbackLabInitial: labInfo.fallbackLab || null,
+                    labAssignedReason:  labInfo.reason,
+                });
+            }
+        });
 
         const headCell = {
             type: "PRACTICAL",
             span: 2,
             fixed: false,
-            batchAllocations: allocations,
+            batchAllocations: practicalAllocations,
+            tutorialAllocations: tutorialAllocations.length > 0 ? tutorialAllocations : undefined,
         };
 
         const tailCell = {
             type: "PRACTICAL",
             span: 0,
             fixed: false,
-            batchAllocations: allocations,
+            batchAllocations: practicalAllocations,
+            tutorialAllocations: tutorialAllocations.length > 0 ? tutorialAllocations : undefined,
         };
 
         // Write to timetable
@@ -368,16 +434,22 @@ export class CollegeOccupancy {
 
         // Update occupancies for each batch in the group
         batchSessions.forEach((session, idx) => {
-            const lab = assignedLabs[idx] || session.location;
+            const labInfo = resolveLabInfo(assignedLabs[idx], idx);
+            const roomOrLab = labInfo.labInitial;
             this.markFacultyOccupied(session.faculty, day, slot, session);
             this.markFacultyOccupied(session.faculty, day, slot + 1, session);
 
             this.markBatchOccupied(session.batch, day, slot, session);
             this.markBatchOccupied(session.batch, day, slot + 1, session);
 
-            if (lab) {
-                this.markLabOccupied(lab, day, slot, session);
-                this.markLabOccupied(lab, day, slot + 1, session);
+            if (roomOrLab) {
+                if (session.type === "TUTORIAL") {
+                    this.markTutorialRoomOccupied(roomOrLab, day, slot, session);
+                    this.markTutorialRoomOccupied(roomOrLab, day, slot + 1, session);
+                } else {
+                    this.markLabOccupied(roomOrLab, day, slot, session);
+                    this.markLabOccupied(roomOrLab, day, slot + 1, session);
+                }
             }
 
             this.incrementBatchDailyPracticalCount(session.batch, day);
@@ -397,7 +469,7 @@ export class CollegeOccupancy {
             ...session,
             location: assignedRoom || session.location || "",
             span: 1,
-            fixed: false,
+            fixed: session.fixed !== undefined ? session.fixed : false,
         };
 
         this.timetable[divKey][day][slot] = cell;

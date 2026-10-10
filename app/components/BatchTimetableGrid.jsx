@@ -9,10 +9,6 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
     const [selectedBatch, setSelectedBatch] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
 
-    if (!activeTimetable || Object.keys(activeTimetable).length === 0) {
-        return null;
-    }
-
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const slots = [
         "9:15 - 10:15",
@@ -23,24 +19,28 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
         "3:15 - 4:15",
     ];
 
-    const yearGroupMap = {};
-    Object.keys(activeTimetable).forEach((divKey) => {
-        const yearPrefix = divKey.split("-")[0] || divKey;
-        if (!yearGroupMap[yearPrefix]) yearGroupMap[yearPrefix] = [];
+    const yearGroupMap = useMemo(() => {
+        const map = {};
+        if (!activeTimetable) return map;
+        Object.keys(activeTimetable).forEach((divKey) => {
+            const yearPrefix = divKey.split("-")[0] || divKey;
+            if (!map[yearPrefix]) map[yearPrefix] = [];
 
-        const divData = activeTimetable[divKey];
-        days.forEach((day) => {
-            (divData[day] || []).forEach((session) => {
-                if (session && session.batchAllocations) {
-                    session.batchAllocations.forEach((alloc) => {
-                        if (alloc.batch && !yearGroupMap[yearPrefix].includes(alloc.batch)) {
-                            yearGroupMap[yearPrefix].push(alloc.batch);
-                        }
-                    });
-                }
+            const divData = activeTimetable[divKey];
+            days.forEach((day) => {
+                (divData[day] || []).forEach((session) => {
+                    if (session && session.batchAllocations) {
+                        session.batchAllocations.forEach((alloc) => {
+                            if (alloc.batch && !map[yearPrefix].includes(alloc.batch)) {
+                                map[yearPrefix].push(alloc.batch);
+                            }
+                        });
+                    }
+                });
             });
         });
-    });
+        return map;
+    }, [activeTimetable]);
 
     const yearKeys = Object.keys(yearGroupMap);
 
@@ -54,6 +54,10 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
         const q = searchQuery.toLowerCase();
         return rawBatches.filter((b) => b.toLowerCase().includes(q));
     }, [yearGroupMap, selectedYear, searchQuery]);
+
+    if (!activeTimetable || Object.keys(activeTimetable).length === 0) {
+        return null;
+    }
 
     const highlightText = (text, query) => {
         if (!query || !text) return text;

@@ -69,7 +69,7 @@ export default function YearWiseCourses({ yearWiseData = {} }) {
                                     {course.courseCode || course.code || `CS-${idx + 101}`}
                                 </td>
                                 <td className="p-3 font-bold text-[#0f172a]">
-                                    {course.subject || course.subjectName || course.name}
+                                    {course.courseName || course.subject || course.subjectName || course.name}
                                 </td>
                                 <td className="p-3 text-center">
                                     <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded ${
@@ -92,7 +92,7 @@ export default function YearWiseCourses({ yearWiseData = {} }) {
                                     {course.practicalCount || course.practicals || course.P || 0} hrs
                                 </td>
                                 <td className="p-3 font-bold text-[#475569]">
-                                    {course.faculty || "Prof. Assigned"}
+                                    {course.faculty || Object.values(course.divisions || {}).filter(Boolean).join(", ") || "Prof. Assigned"}
                                 </td>
                             </tr>
                         ))}

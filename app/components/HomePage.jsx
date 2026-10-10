@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { 
     Sparkles, Cpu, ShieldCheck, Zap, Layers, ArrowRight, 
@@ -50,11 +50,11 @@ export default function HomePage({ onLaunchStudio }) {
     const [showChangelog, setShowChangelog] = useState(false);
     const [changelogVersion, setChangelogVersion] = useState("all"); // 'all' | 'v4.5' | 'v4.4'
     const [previewTab, setPreviewTab] = useState("division"); // 'division' | 'faculty' | 'lab'
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const mounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    );
 
     useEffect(() => {
         if (!showChangelog) return;
@@ -106,7 +106,7 @@ export default function HomePage({ onLaunchStudio }) {
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1]/80 hover:bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-bold shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer group hover:scale-[1.02] active:scale-[0.98]"
                         >
                             <Sparkles className="w-3.5 h-3.5 text-[#0d9488] group-hover:rotate-12 transition-transform duration-200" />
-                            <span>What's New in v4.5 & v4.4</span>
+                            <span>What&apos;s New in v4.5 & v4.4</span>
                             <span className="px-1.5 py-0.5 rounded-md bg-[#0d9488] text-white text-[9px] font-extrabold tracking-wide">
                                 NOTES
                             </span>

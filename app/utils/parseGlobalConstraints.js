@@ -1,4 +1,4 @@
-import { normalizeYearHeader } from "./parseLoadSheet";
+import { normalizeYearHeader } from "./parseLoadSheet.js";
 
 export function parseGlobalConstraints(rows) {
     const constraints = [];

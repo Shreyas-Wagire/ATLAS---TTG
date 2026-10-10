@@ -294,6 +294,39 @@ export function validatePlacement({
                 }
             }
         }
+
+        // Daily lecture distribution and consecutive check
+        if (session.type === "LECTURE" || session.type === "THEORY") {
+            const targetSubj = (session.subject || session.courseCode || session.courseName || "").toUpperCase().trim();
+            if (targetSubj) {
+                const daySlots = timetable[divKey]?.[targetDay] || [];
+                let countOnDay = 0;
+                for (let s = 0; s < SLOTS_PER_DAY; s++) {
+                    if (excludePositions && excludePositions.has(`${divKey}|${targetDay}|${s}`)) continue;
+                    const cell = daySlots[s];
+                    if (!cell) continue;
+                    const cellSubj = (cell.subject || cell.courseCode || cell.courseName || "").toUpperCase().trim();
+                    if (cellSubj === targetSubj && (cell.type === "LECTURE" || cell.type === "THEORY")) {
+                        countOnDay++;
+                    }
+                }
+                if (countOnDay >= 1) {
+                    violations.push("Duplicate lecture per day");
+                }
+
+                // Check non-consecutive
+                const prevCell = targetSlot > 0 ? daySlots[targetSlot - 1] : null;
+                const nextCell = targetSlot < SLOTS_PER_DAY - 1 ? daySlots[targetSlot + 1] : null;
+                if (prevCell && !excludePositions?.has(`${divKey}|${targetDay}|${targetSlot - 1}`)) {
+                    const prevSubj = (prevCell.subject || prevCell.courseCode || prevCell.courseName || "").toUpperCase().trim();
+                    if (prevSubj === targetSubj) violations.push("Consecutive lecture of same course");
+                }
+                if (nextCell && !excludePositions?.has(`${divKey}|${targetDay}|${targetSlot + 1}`)) {
+                    const nextSubj = (nextCell.subject || nextCell.courseCode || nextCell.courseName || "").toUpperCase().trim();
+                    if (nextSubj === targetSubj) violations.push("Consecutive lecture of same course");
+                }
+            }
+        }
     }
 
     return { valid: violations.length === 0, violations };

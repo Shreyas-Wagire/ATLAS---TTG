@@ -7,10 +7,6 @@ export default function FacultyTimetableGrid({ facultyTimetable }) {
     const [selectedFaculty, setSelectedFaculty] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
 
-    if (!facultyTimetable || Object.keys(facultyTimetable).length === 0) {
-        return null;
-    }
-
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const slots = [
         "9:15 - 10:15",
@@ -21,13 +17,20 @@ export default function FacultyTimetableGrid({ facultyTimetable }) {
         "3:15 - 4:15",
     ];
 
-    const facultyList = Object.keys(facultyTimetable);
+    const facultyList = useMemo(
+        () => (facultyTimetable ? Object.keys(facultyTimetable) : []),
+        [facultyTimetable]
+    );
 
     const filteredFacultyList = useMemo(() => {
         if (!searchQuery.trim()) return facultyList;
         const q = searchQuery.toLowerCase();
         return facultyList.filter((f) => f.toLowerCase().includes(q));
     }, [facultyList, searchQuery]);
+
+    if (!facultyTimetable || Object.keys(facultyTimetable).length === 0) {
+        return null;
+    }
 
     const displayFaculty =
         selectedFaculty === "ALL"

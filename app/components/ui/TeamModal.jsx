@@ -238,7 +238,7 @@ export default function TeamModal({ isOpen, onClose }) {
                     <div className="flex items-center gap-1.5 text-xs text-[#64748b] font-medium">
                         <span>Crafted with</span>
                         <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-                        <span>for Academic Institutions • ATLAS v4.5</span>
+                        <span>for Academic Institutions • ATLAS v5.5</span>
                     </div>
                     <button
                         onClick={onClose}

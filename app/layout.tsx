@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ATLAS Engine v4.5 — Automated Academic Timetable Generator",
-  description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm (College-Wide Pipeline, Multi-Course Practical Stacking, DAPS, RCAA, CASC). Zero conflict guarantee.",
+  title: "ATLAS Engine v5.5 — Automated Academic Timetable Generator",
+  description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm v5.5 (Course-Aware Lab Allocation, Location Architecture, Multi-Course Practical Stacking, DAPS, CASC). Zero conflict guarantee.",
   keywords: [
     "ATLAS Engine",
     "ATLAS Algorithm",
@@ -36,16 +36,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "ATLAS Engine v4.5 — Automated Academic Timetable Generator",
-    description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm. 100% Zero Conflict Guarantee.",
+    title: "ATLAS Engine v5.5 — Automated Academic Timetable Generator",
+    description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm v5.5. 100% Zero Conflict Guarantee.",
     siteName: "ATLAS Timetable System",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ATLAS Engine v4.5",
-    description: "Automated 2D university timetable generator powered by the ATLAS Algorithm.",
+    title: "ATLAS Engine v5.5",
+    description: "Automated 2D university timetable generator powered by the ATLAS Algorithm v5.5.",
   },
 
 };

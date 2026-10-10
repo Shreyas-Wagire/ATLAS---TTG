@@ -82,12 +82,12 @@ export default function AppHeader({
                 Engine
               </span>
               <span className="text-[10px] font-bold text-[#0f766e] bg-[#ccfbf1]/80 px-1.5 py-0.5 rounded-md border border-[#99f6e4]">
-                v4.5
+                v5.5
               </span>
             </div>
 
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[9px] font-extrabold rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
-              BETA
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[9px] font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+              NEW
             </span>
           </div>
 

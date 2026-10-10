@@ -48,7 +48,7 @@ function RevealSection({ children, className = "", delay = 0, id }) {
 
 export default function HomePage({ onLaunchStudio }) {
     const [showChangelog, setShowChangelog] = useState(false);
-    const [changelogVersion, setChangelogVersion] = useState("all"); // 'all' | 'v4.5' | 'v4.4'
+    const [changelogVersion, setChangelogVersion] = useState("all"); // 'all' | 'v5.5' | 'v4.5' | 'v4.4'
     const [previewTab, setPreviewTab] = useState("division"); // 'division' | 'faculty' | 'lab'
     const mounted = useSyncExternalStore(
         () => () => {},
@@ -94,9 +94,11 @@ export default function HomePage({ onLaunchStudio }) {
                     <div className="flex flex-wrap items-center justify-center gap-2.5 mb-7">
                         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/90 border border-teal-200/80 text-[#0f766e] text-xs font-bold shadow-2xs backdrop-blur-xs">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>ATLAS Engine v4.5</span>
+                            <span>ATLAS Engine v5.5</span>
                             <span className="text-[#94a3b8] font-normal">|</span>
-                            <span className="text-[11px] font-semibold text-[#0d9488]">Production Build</span>
+                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
+                                v5.5 NEW
+                            </span>
                         </div>
 
                         {/* Interactive Changelog Trigger Pill */}
@@ -106,9 +108,9 @@ export default function HomePage({ onLaunchStudio }) {
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1]/80 hover:bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-bold shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer group hover:scale-[1.02] active:scale-[0.98]"
                         >
                             <Sparkles className="w-3.5 h-3.5 text-[#0d9488] group-hover:rotate-12 transition-transform duration-200" />
-                            <span>What&apos;s New in v4.5 & v4.4</span>
+                            <span>What&apos;s New in v5.5</span>
                             <span className="px-1.5 py-0.5 rounded-md bg-[#0d9488] text-white text-[9px] font-extrabold tracking-wide">
-                                NOTES
+                                v5.5 NEW
                             </span>
                         </button>
                     </div>
@@ -134,7 +136,7 @@ export default function HomePage({ onLaunchStudio }) {
 
                     {/* Subtext — concise, readable, high contrast */}
                     <p className="text-sm sm:text-base text-[#475569] max-w-2xl mx-auto font-normal leading-relaxed mb-8">
-                        Powered by <strong className="font-bold text-[#0d9488]">ATLAS Algorithm v4.5</strong> — an adaptive scheduling engine designed for college-wide timetable generation, parallel practical allocation, dynamic constraint optimization, and conflict repair.
+                        Powered by <strong className="font-bold text-[#0d9488]">ATLAS Algorithm v5.5</strong> — an adaptive scheduling engine designed for course-aware laboratory allocation, physical campus constraints, college-wide timetable generation, and conflict repair.
                     </p>
 
                     {/* Action Group */}
@@ -144,7 +146,7 @@ export default function HomePage({ onLaunchStudio }) {
                             variant="primary"
                             className="py-3 px-7 text-sm font-extrabold shadow-sm hover:shadow-md transition-all group"
                         >
-                            <span>Start Timetable Generation (v4.5)</span>
+                            <span>Start Timetable Generation (v5.5)</span>
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                         </ShimmerButton>
 
@@ -514,7 +516,7 @@ export default function HomePage({ onLaunchStudio }) {
                                 <span>Academic Research Specification & Solver Formulation</span>
                             </div>
                             <span className="text-[10px] font-mono text-[#94a3b8] hidden sm:inline">
-                                Ref: ATLAS-V45-ALGO
+                                Ref: ATLAS-V55-ALGO
                             </span>
                         </div>
                         <p className="italic text-[#475569] leading-relaxed">
@@ -783,7 +785,7 @@ export default function HomePage({ onLaunchStudio }) {
                                     variant="primary"
                                     className="py-3 px-8 text-sm font-extrabold"
                                 >
-                                    <span>Launch Timetable Studio (v4.5)</span>
+                                    <span>Launch Timetable Studio (v5.5)</span>
                                     <ArrowRight className="w-4 h-4" />
                                 </ShimmerButton>
                             </div>
@@ -815,15 +817,18 @@ export default function HomePage({ onLaunchStudio }) {
                                         <h3 className="text-base font-extrabold text-[#0f172a]">
                                             ATLAS Engine Release Notes
                                         </h3>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                            v4.5 LATEST
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
+                                            v5.5 NEW
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                                            v4.5 UI
                                         </span>
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                                             v4.4 SOLVER
                                         </span>
                                     </div>
                                     <p className="text-xs text-[#64748b] font-medium">
-                                        Comprehensive changelog for v4.5 (UI/UX & Workflow) and v4.4 (Core Engine Solver)
+                                        Comprehensive changelog for v5.5 (Course-Aware Lab Engine & Location Architecture), v4.5 (UI/UX & Workflow), and v4.4 (Core Engine Solver)
                                     </p>
                                 </div>
                             </div>
@@ -840,9 +845,10 @@ export default function HomePage({ onLaunchStudio }) {
                         {/* Version Filter Tabs */}
                         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#f0f4f3] border border-[#e2e8f0] shrink-0">
                             {[
-                                { id: "all", label: "All Updates (v4.5 & v4.4)" },
+                                { id: "all", label: "All Updates" },
+                                { id: "v5.5", label: "v5.5 • Lab Solver (NEW)" },
                                 { id: "v4.5", label: "v4.5 • UI & Workflows" },
-                                { id: "v4.4", label: "v4.4 • Core Engine Solver" },
+                                { id: "v4.4", label: "v4.4 • Core Solver" },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -861,12 +867,110 @@ export default function HomePage({ onLaunchStudio }) {
 
                         {/* Scrollable Changelog Content */}
                         <div className="space-y-4 overflow-y-auto pr-1.5 text-xs flex-1">
-                            {/* ── SECTION: v4.5 RELEASES ── */}
-                            {(changelogVersion === "all" || changelogVersion === "v4.5") && (
+                            {/* ── SECTION: v5.5 RELEASES (NEW) ── */}
+                            {(changelogVersion === "all" || changelogVersion === "v5.5") && (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
                                         <div className="flex items-center gap-2">
                                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <h4 className="font-extrabold text-sm text-[#0f172a]">
+                                                Version 5.5 — Course-Aware Lab Allocation & Physical Location Architecture
+                                            </h4>
+                                        </div>
+                                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
+                                            v5.5 NEW
+                                        </span>
+                                    </div>
+
+                                    {/* 5.5 Items */}
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Database className="w-4 h-4 text-emerald-600" />
+                                            1. Physical Campus Infrastructure Ingestion (The 3rd Sheet Parser)
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Ingests physical college campus infrastructure from the 3rd sheet (<code>Location</code>): Classrooms, Tutorial Rooms, and Specialized Laboratories with full names, canonical initials, equipment features, and mapped course catalogs. Robust normalization handles multiline strings, dashes, slashes, and Roman numerals to eliminate string mismatches.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Beaker className="w-4 h-4 text-emerald-600" />
+                                            2. Pre-Scheduling Course-to-Lab Resolver & Scored Fallbacks
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Replaced unconstrained lab matching with deterministic course-to-lab binding. Evaluates primary mapped laboratories and scores compatible domain fallbacks based on shared physical equipment. Standardized designations (<code>PRIMARY</code>, <code>FALLBACK</code>, <code>MANUAL</code>, <code>UNRESOLVED</code>) eliminate arbitrary cross-department lab allocations and phantom courses.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Activity className="w-4 h-4 text-emerald-600" />
+                                            3. Lab Resource Pressure Integration in DAPS
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Dynamic Adaptive Priority Scheduling boosts sessions requiring scarce, highly contended laboratories (+100 to +150 score). Laboratories with zero fallback alternatives are prioritized and locked in before general rooms or slots are depleted.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Users className="w-4 h-4 text-emerald-600" />
+                                            4. Pass 0 Division Cohort Packing & 1-Batch-Per-Faculty Invariant
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Introduced Pass 0 Cohort Packing for division-wide practicals without individual batch instructors (<code>!hasBatchCols</code>): all batches attend the lab together in one 2-hour window with their division faculty, saving 3 practical slots and eliminating TY-B CM schedule saturation. Rotation electives (<code>hasBatchCols</code>) strictly enforce the 1-batch-per-faculty invariant across distinct days.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Layers className="w-4 h-4 text-emerald-600" />
+                                            5. Multi-Pass Practical Stacking (Pass 0 to Pass 5: 4 → 3 → 2 → 1)
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Unified parallel execution hierarchy: Pass 0 (Cohorts) → Pass 1 (4-batch stacks) → Pass 2 (3-batch stacks) → Pass 3 (2-batch paired stacks) → Pass 4 (2-batch afternoon blocks) → Pass 5 (Single batches). Prioritizes high cross-course diversity to rotate students across different laboratories.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                            6. Tutorial Room Allocation & Faculty Harmonization
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Batches sharing the same tutorial session and faculty member now co-occupy the assigned tutorial room simultaneously, completely eliminating tutorial room double-booking clashes.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <Sliders className="w-4 h-4 text-emerald-600" />
+                                            7. Interactive UI Badges, Controlled Overrides & Diagnostic Explanations
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Eliminated UTF-8 mojibake characters in favor of clean color-coded badges (PRIMARY, FALLBACK, MANUAL, UNRESOLVED). Added Controlled Manual Override Modal preventing invalid assignments or slot collisions, plus slot-by-slot diagnostic root-cause reporting for unallocated sessions.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-300/80 space-y-1 shadow-2xs">
+                                        <div className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                            8. Empirical Benchmarks: 0 Total Clashes & 0 Unallocated Practicals
+                                        </div>
+                                        <p className="text-[#334155] font-medium leading-relaxed">
+                                            Validated with 0 Faculty Clashes, 0 Room Clashes, 0 Lab Clashes, 0 Tutorial Room Clashes, 0 Batch Clashes, 0 Division Clashes, 0 Break Violations, and 0 Fixed Constraint Violations. Next.js 16 (Turbopack) production build compiles cleanly.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ── SECTION: v4.5 RELEASES ── */}
+                            {(changelogVersion === "all" || changelogVersion === "v4.5") && (
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
                                             <h4 className="font-extrabold text-sm text-[#0f172a]">Version 4.5 — Modern Minimal UI/UX Architecture</h4>
                                         </div>
                                         <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md">Oct 2026</span>
@@ -982,7 +1086,7 @@ export default function HomePage({ onLaunchStudio }) {
                         {/* Modal Footer */}
                         <div className="flex items-center justify-between pt-3 border-t border-[#b8ccc8]/40 shrink-0">
                             <span className="text-[11px] text-[#94a3b8] font-medium">
-                                Showing: <strong className="text-[#0f766e]">{changelogVersion === "all" ? "v4.5 & v4.4" : changelogVersion}</strong>
+                                Showing: <strong className="text-[#0f766e]">{changelogVersion === "all" ? "v5.5 (NEW), v4.5 & v4.4" : changelogVersion}</strong>
                             </span>
                             <button
                                 type="button"

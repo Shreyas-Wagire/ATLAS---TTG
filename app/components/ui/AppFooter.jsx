@@ -20,7 +20,7 @@ export default function AppFooter() {
             <span className="text-[#e2e8f0]">|</span>
             <span className="flex items-center gap-1.5 font-bold text-[#334155]">
               <Cpu className="w-3.5 h-3.5 text-[#0d9488]" />
-              ATLAS Engine v4.5 Turbo
+              ATLAS Engine v5.5 Turbo
             </span>
           </div>
 
@@ -41,7 +41,7 @@ export default function AppFooter() {
           <div className="text-[11px] font-medium text-[#94a3b8]">
             <span>Automatic Timetable Generator System</span>
             <span className="mx-2 text-[#e2e8f0]">|</span>
-            <span className="font-semibold text-[#64748b]">Enterprise v4.5</span>
+            <span className="font-semibold text-[#64748b]">Enterprise v5.5</span>
           </div>
         </div>
       </footer>

@@ -40,17 +40,17 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
     };
 
     return (
-        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-2xs overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="atlas-settings-card rounded-[22px] bg-white border border-[#e1e9e6] shadow-[0_12px_40px_-32px_rgba(20,57,51,0.3)] overflow-hidden">
+            <div className="px-5 sm:px-6 py-5 bg-white border-b border-[#edf1ef] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
+                    <div className="w-9 h-9 rounded-xl bg-[#edf6f3] border border-[#dcebe6] flex items-center justify-center text-[#3730a3]">
                         <Globe className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold text-[#0f172a]">
+                        <h3 className="text-sm font-bold tracking-tight text-[#142d2a]">
                             Add Inter-Department & External Courses
                         </h3>
-                        <p className="text-[11px] text-[#64748b] font-medium">
+                        <p className="text-xs text-[#71817d] mt-0.5">
                             Inject cross-faculty electives and external department load directly
                         </p>
                     </div>
@@ -66,7 +66,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                         <select
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488]"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#4338ca]"
                         >
                             <option value="">Select Year...</option>
                             {yearsList.map((y) => (
@@ -84,7 +84,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Cyber Law & Ethics"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                         />
                     </div>
 
@@ -97,7 +97,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Prof. Mehta"
                             value={faculty}
                             onChange={(e) => setFaculty(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                         />
                     </div>
 
@@ -110,7 +110,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                             placeholder="e.g. Hall-B"
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                            className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                         />
                     </div>
                 </div>
@@ -148,7 +148,7 @@ export default function ExternalCourses({ yearWiseData = {}, setYearWiseData }) 
                 <div className="flex justify-end pt-2">
                     <button
                         type="submit"
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4338ca] hover:bg-[#3730a3] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Inject External Course</span>

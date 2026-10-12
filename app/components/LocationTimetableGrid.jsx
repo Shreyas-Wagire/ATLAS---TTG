@@ -159,7 +159,7 @@ export default function LocationTimetableGrid({ locationTimetable }) {
                             </span>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto overscroll-x-contain touch-pan-x" tabIndex={0} aria-label="Scrollable location timetable">
                             <table className="w-full border-collapse table-fixed min-w-[750px] text-xs">
                                 <thead>
                                     <tr className="bg-[#EBF4F2]/70 text-[#64748B] border-b border-[#D3E6E2]">

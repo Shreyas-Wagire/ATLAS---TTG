@@ -1,7 +1,24 @@
 import { isSubjectMatch, isAptitudeSubject } from "./normalizeSubjectName.js";
 import { normalizeYearHeader } from "./parseLoadSheet.js";
 
-export function applyFixedConstraints(timetable, globalConstraints) {
+/**
+ * Apply fixed constraints to a timetable.
+ *
+ * @param {Object} timetable - The timetable object (divKey -> day -> slots[])
+ * @param {Array} globalConstraints - Array of constraint objects
+ * @param {Object} options - Optional configuration
+ * @param {string} options.department - Department code for dept-scoped fixed sessions
+ * @param {boolean} options.isGlobalSheet - Whether these come from the Global sheet (college-wide)
+ * @param {Array} options.overlapDiagnostics - Array to push overlap warnings into
+ * @returns {Object} The modified timetable
+ */
+export function applyFixedConstraints(timetable, globalConstraints, options = {}) {
+    const {
+        department = null,
+        isGlobalSheet = true,
+        overlapDiagnostics = null,
+    } = options;
+
     const dayMap = {
         MON: "Monday",
         MONDAY: "Monday",
@@ -27,6 +44,41 @@ export function applyFixedConstraints(timetable, globalConstraints) {
         if (cleanTime.includes("3:15")) return 5;
 
         return undefined;
+    }
+
+    /**
+     * Check for overlap before placing a fixed constraint.
+     * Never silently move/delete/duplicate existing fixed sessions.
+     */
+    function checkAndPlace(timetableKey, day, slot, newCell) {
+        if (!timetable[timetableKey]?.[day]) return;
+
+        const existing = timetable[timetableKey][day][slot];
+        if (existing && existing.fixed) {
+            // Existing fixed session — never overwrite!
+            const msg = `Fixed constraint overlap at ${timetableKey} ${day} slot ${slot}: ` +
+                `existing "${existing.subject}" (${existing.department || "unknown"}) ` +
+                `vs new "${newCell.subject}" (${newCell.department || department || "unknown"}). ` +
+                `Keeping existing; skipping new.`;
+            console.warn(msg);
+            if (overlapDiagnostics) {
+                overlapDiagnostics.push({
+                    level: "WARNING",
+                    type: "FIXED_OVERLAP",
+                    timetableKey,
+                    day,
+                    slot,
+                    existing: existing.subject,
+                    incoming: newCell.subject,
+                    existingDept: existing.department,
+                    incomingDept: newCell.department || department,
+                    message: msg,
+                });
+            }
+            return; // Do NOT overwrite
+        }
+
+        timetable[timetableKey][day][slot] = newCell;
     }
 
     // Deduplicate Aptitude constraints per year (keep at most 1 official Aptitude constraint per year)
@@ -123,47 +175,54 @@ export function applyFixedConstraints(timetable, globalConstraints) {
                         constraint.time.includes("4:15")
                     ));
 
+                const facultyValue = constraintFaculty && String(constraintFaculty).trim() !== ""
+                    ? String(constraintFaculty).trim()
+                    : "FIXED";
+
                 if (is2HourBlock && slot < 5) {
-                    timetable[timetableKey][day][slot] = {
+                    checkAndPlace(timetableKey, day, slot, {
                         year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
-                        faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
+                        faculty: facultyValue,
                         fixed: true,
-                        isGlobal: true,
+                        isGlobal: isGlobalSheet,
                         isSync: true,
                         span: 2,
                         day: constraint.day,
                         time: constraint.time,
-                    };
-                    timetable[timetableKey][day][slot + 1] = {
+                        department: department,
+                    });
+                    checkAndPlace(timetableKey, day, slot + 1, {
                         year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
-                        faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
+                        faculty: facultyValue,
                         fixed: true,
-                        isGlobal: true,
+                        isGlobal: isGlobalSheet,
                         isSync: true,
                         span: 0,
                         day: constraint.day,
                         time: constraint.time,
-                    };
+                        department: department,
+                    });
                 } else {
-                    timetable[timetableKey][day][slot] = {
+                    checkAndPlace(timetableKey, day, slot, {
                         year: cYear,
                         division,
                         subject: displayName,
                         type: getConstraintType(constraint),
-                        faculty: constraintFaculty && String(constraintFaculty).trim() !== "" ? String(constraintFaculty).trim() : "FIXED",
+                        faculty: facultyValue,
                         fixed: true,
-                        isGlobal: true,
+                        isGlobal: isGlobalSheet,
                         isSync: true,
                         span: 1,
                         day: constraint.day,
                         time: constraint.time,
-                    };
+                        department: department,
+                    });
                 }
             });
         });
@@ -177,4 +236,4 @@ function getConstraintType(constraint) {
     if (constraint.P > 0) return "PRACTICAL";
     if (constraint.T > 0) return "TUTORIAL";
     return "LECTURE";
-}
+}

@@ -39,17 +39,200 @@ export class CollegeOccupancy {
         this.slotsPerDay = SLOTS_PER_DAY;
 
         // Master occupancy tracking structures:
-        // Keyed by: resource/entity -> day -> slot -> true | sessionRef
+        // Keyed by: resource/entity -> day -> slot -> { session, department }
         this.globalReservations = {};      // divKey -> day -> slot -> session
-        this.facultyOccupancy = {};        // faculty -> day -> slot -> session
-        this.classroomOccupancy = {};      // roomName -> day -> slot -> session
-        this.labOccupancy = {};            // labName -> day -> slot -> session
-        this.tutorialRoomOccupancy = {};   // trName -> day -> slot -> session
-        this.divisionOccupancy = {};       // divKey -> day -> slot -> session
-        this.batchOccupancy = {};          // batchLabel -> day -> slot -> session
+        this.facultyOccupancy = {};        // faculty -> day -> slot -> { session, department }
+        this.classroomOccupancy = {};      // roomName -> day -> slot -> { session, department }
+        this.labOccupancy = {};            // labName -> day -> slot -> { session, department }
+        this.tutorialRoomOccupancy = {};   // trName -> day -> slot -> { session, department }
+        this.divisionOccupancy = {};       // divKey -> day -> slot -> { session, department }
+        this.batchOccupancy = {};          // batchLabel -> day -> slot -> { session, department }
 
         // Daily practical count per batch (to enforce max 2 labs/day)
         this.batchDailyPracticalCount = {}; // batchLabel -> day -> count
+
+        // v6.5: Department ownership tracking for shared resources
+        this.resourceOwnership = {};  // resourceKey -> day -> slot -> deptCode
+
+        // v6.5: Current active department during per-department scheduling pass
+        this.activeDepartment = null;
+    }
+
+    setActiveDepartment(deptCode) {
+        this.activeDepartment = deptCode || null;
+    }
+
+    _resolveDivKey(divKey, dept = null) {
+        if (!divKey) return divKey;
+        if (divKey.includes(":")) return divKey;
+        const d = dept || this.activeDepartment || CollegeOccupancy.extractDeptFromDivKey(divKey);
+        return d ? `${d}:${divKey}` : divKey;
+    }
+
+    _resolveBatchKey(batch, dept = null) {
+        if (!batch) return batch;
+        if (String(batch).includes(":")) return batch;
+        const d = dept || this.activeDepartment;
+        return d ? `${d}:${batch}` : batch;
+    }
+
+    // ─── DEPARTMENT HELPERS ──────────────────────────────────────────────────
+
+    /**
+     * Extract department code from a div key like "CSE:SY-A" → "CSE", or "SY-A" → null.
+     */
+    static extractDeptFromDivKey(divKey) {
+        if (!divKey) return null;
+        const colonIdx = divKey.indexOf(":");
+        if (colonIdx > 0) return divKey.substring(0, colonIdx);
+        return null;
+    }
+
+    /**
+     * Extract department from a session object.
+     */
+    static extractDeptFromSession(session) {
+        if (!session) return null;
+        if (typeof session === "object" && session.department) return session.department;
+        if (typeof session === "object" && session._deptDivKey) {
+            return CollegeOccupancy.extractDeptFromDivKey(session._deptDivKey);
+        }
+        return null;
+    }
+
+    /**
+     * Build an occupancy record that includes department ownership.
+     */
+    _buildOccupancyRecord(session, dept) {
+        const department = dept
+            || CollegeOccupancy.extractDeptFromSession(session)
+            || null;
+        if (session && typeof session === "object") {
+            return { ...session, _ownerDept: department };
+        }
+        return { _ownerDept: department, _marker: true };
+    }
+
+    /**
+     * Get the department that owns a resource at a given (day, slot).
+     * Supports both:
+     *   getDepartmentForResource(resourceType, resourceKey, day, slot)
+     *   getDepartmentForResource(resourceKey, day, slot)
+     *
+     * @returns {string|null} Department code or null
+     */
+    getDepartmentForResource(arg1, arg2, arg3, arg4) {
+        let record = null;
+        if (arg4 !== undefined) {
+            // 4 arguments: (resourceType, resourceKey, day, slot)
+            const resourceType = arg1;
+            const resourceKey = arg2;
+            const day = arg3;
+            const slot = arg4;
+            const norm = resourceKey ? String(resourceKey).toUpperCase().trim() : resourceKey;
+            switch (resourceType) {
+                case "faculty": record = this.facultyOccupancy[resourceKey]?.[day]?.[slot]; break;
+                case "lab": record = this.labOccupancy[norm]?.[day]?.[slot]; break;
+                case "classroom": record = this.classroomOccupancy[norm]?.[day]?.[slot]; break;
+                case "tutorialRoom": record = this.tutorialRoomOccupancy[norm]?.[day]?.[slot]; break;
+                case "division": record = this.divisionOccupancy[resourceKey]?.[day]?.[slot]; break;
+                case "batch": record = this.batchOccupancy[resourceKey]?.[day]?.[slot]; break;
+                default: break;
+            }
+        } else {
+            // 3 arguments: (resourceKey, day, slot)
+            const resourceKey = arg1;
+            const day = arg2;
+            const slot = arg3;
+            const norm = resourceKey ? String(resourceKey).toUpperCase().trim() : resourceKey;
+            record = this.classroomOccupancy[norm]?.[day]?.[slot]
+                || this.labOccupancy[norm]?.[day]?.[slot]
+                || this.tutorialRoomOccupancy[norm]?.[day]?.[slot]
+                || this.facultyOccupancy[resourceKey]?.[day]?.[slot]
+                || this.divisionOccupancy[resourceKey]?.[day]?.[slot];
+        }
+
+        if (!record) return null;
+        if (typeof record === "object" && record._ownerDept) return record._ownerDept;
+        if (typeof record === "object" && record.department) return record.department;
+        return null;
+    }
+
+    /**
+     * Convenience lookup: get department for occupied faculty.
+     */
+    getDepartmentForFaculty(faculty, day, slot) {
+        const record = this.facultyOccupancy[faculty]?.[day]?.[slot];
+        if (!record) return null;
+        return record._ownerDept || record.department || null;
+    }
+
+    /**
+     * Generate a department-aware occupancy diagnostic report.
+     * Shows utilization per department for faculty, labs, classrooms, etc.
+     */
+    getOccupancyReport() {
+        const report = {
+            facultyByDept: {},     // deptCode -> { faculty -> slotsUsed }
+            labsByDept: {},        // deptCode -> { lab -> slotsUsed }
+            classroomsByDept: {},  // deptCode -> { room -> slotsUsed }
+            sharedResources: [],   // resources used by multiple depts
+            totalSlots: DAYS.length * SLOTS_PER_DAY,
+        };
+
+        // Faculty occupancy by department
+        Object.entries(this.facultyOccupancy).forEach(([faculty, daysMap]) => {
+            Object.entries(daysMap || {}).forEach(([day, slots]) => {
+                Object.entries(slots || {}).forEach(([slot, record]) => {
+                    const dept = (record && typeof record === "object")
+                        ? (record._ownerDept || record.department || "UNKNOWN")
+                        : "UNKNOWN";
+                    if (!report.facultyByDept[dept]) report.facultyByDept[dept] = {};
+                    if (!report.facultyByDept[dept][faculty]) report.facultyByDept[dept][faculty] = 0;
+                    report.facultyByDept[dept][faculty]++;
+                });
+            });
+        });
+
+        // Lab occupancy by department
+        Object.entries(this.labOccupancy).forEach(([lab, daysMap]) => {
+            const labDepts = new Set();
+            Object.entries(daysMap || {}).forEach(([day, slots]) => {
+                Object.entries(slots || {}).forEach(([slot, record]) => {
+                    const dept = (record && typeof record === "object")
+                        ? (record._ownerDept || record.department || "UNKNOWN")
+                        : "UNKNOWN";
+                    labDepts.add(dept);
+                    if (!report.labsByDept[dept]) report.labsByDept[dept] = {};
+                    if (!report.labsByDept[dept][lab]) report.labsByDept[dept][lab] = 0;
+                    report.labsByDept[dept][lab]++;
+                });
+            });
+            if (labDepts.size > 1) {
+                report.sharedResources.push({ type: "LAB", name: lab, departments: [...labDepts] });
+            }
+        });
+
+        // Classroom occupancy by department
+        Object.entries(this.classroomOccupancy).forEach(([room, daysMap]) => {
+            const roomDepts = new Set();
+            Object.entries(daysMap || {}).forEach(([day, slots]) => {
+                Object.entries(slots || {}).forEach(([slot, record]) => {
+                    const dept = (record && typeof record === "object")
+                        ? (record._ownerDept || record.department || "UNKNOWN")
+                        : "UNKNOWN";
+                    roomDepts.add(dept);
+                    if (!report.classroomsByDept[dept]) report.classroomsByDept[dept] = {};
+                    if (!report.classroomsByDept[dept][room]) report.classroomsByDept[dept][room] = 0;
+                    report.classroomsByDept[dept][room]++;
+                });
+            });
+            if (roomDepts.size > 1) {
+                report.sharedResources.push({ type: "CLASSROOM", name: room, departments: [...roomDepts] });
+            }
+        });
+
+        return report;
     }
 
     // ─── LOCK GLOBAL COLLEGE-WIDE SESSIONS (PRIORITY 1) ───────────────────────
@@ -60,6 +243,7 @@ export class CollegeOccupancy {
      */
     lockGlobalSessions(timetable, globalConstraints = []) {
         Object.entries(timetable || {}).forEach(([divKey, daysMap]) => {
+            const dept = CollegeOccupancy.extractDeptFromDivKey(divKey) || "GLOBAL";
             this.days.forEach((day) => {
                 const slots = daysMap?.[day] || [];
                 slots.forEach((cell, slot) => {
@@ -67,6 +251,7 @@ export class CollegeOccupancy {
                     if (cell.fixed || cell.isGlobal) {
                         cell.fixed = true;
                         cell.isGlobal = true;
+                        cell.department = cell.department || dept;
 
                         // Lock into globalReservations
                         if (!this.globalReservations[divKey]) this.globalReservations[divKey] = {};
@@ -74,39 +259,39 @@ export class CollegeOccupancy {
                         this.globalReservations[divKey][day][slot] = cell;
 
                         // Lock division slot
-                        this.markDivisionOccupied(divKey, day, slot, cell);
+                        this.markDivisionOccupied(divKey, day, slot, cell, dept);
 
                         // Lock faculty globally
                         if (isRealFaculty(cell.faculty)) {
-                            this.markFacultyOccupied(cell.faculty, day, slot, cell);
+                            this.markFacultyOccupied(cell.faculty, day, slot, cell, dept);
                         }
                         if (Array.isArray(cell.batchAllocations)) {
                             cell.batchAllocations.forEach((alloc) => {
                                 if (isRealFaculty(alloc.faculty)) {
-                                    this.markFacultyOccupied(alloc.faculty, day, slot, alloc);
+                                    this.markFacultyOccupied(alloc.faculty, day, slot, alloc, dept);
                                 }
                                 if (alloc.batch) {
-                                    this.markBatchOccupied(alloc.batch, day, slot, alloc);
+                                    this.markBatchOccupied(alloc.batch, day, slot, alloc, dept);
                                 }
                                 if (alloc.location) {
-                                    this.markLabOccupied(alloc.location, day, slot, alloc);
+                                    this.markLabOccupied(alloc.location, day, slot, alloc, dept);
                                 }
                             });
                         }
 
                         // Lock batch if present
                         if (cell.batch) {
-                            this.markBatchOccupied(cell.batch, day, slot, cell);
+                            this.markBatchOccupied(cell.batch, day, slot, cell, dept);
                         }
 
                         // Lock room / lab if present
                         if (cell.location && cell.location !== "TBD" && cell.location !== "FIXED") {
                             if (cell.type === "PRACTICAL") {
-                                this.markLabOccupied(cell.location, day, slot, cell);
+                                this.markLabOccupied(cell.location, day, slot, cell, dept);
                             } else if (cell.type === "TUTORIAL") {
-                                this.markTutorialRoomOccupied(cell.location, day, slot, cell);
+                                this.markTutorialRoomOccupied(cell.location, day, slot, cell, dept);
                             } else {
-                                this.markClassroomOccupied(cell.location, day, slot, cell);
+                                this.markClassroomOccupied(cell.location, day, slot, cell, dept);
                             }
                         }
                     }
@@ -116,12 +301,13 @@ export class CollegeOccupancy {
     }
 
     // ─── OCCUPANCY MARKERS ───────────────────────────────────────────────────
+    // All markers now accept an optional `dept` parameter for department ownership.
 
-    markFacultyOccupied(faculty, day, slot, session) {
+    markFacultyOccupied(faculty, day, slot, session, dept) {
         if (!isRealFaculty(faculty)) return;
         if (!this.facultyOccupancy[faculty]) this.facultyOccupancy[faculty] = {};
         if (!this.facultyOccupancy[faculty][day]) this.facultyOccupancy[faculty][day] = {};
-        this.facultyOccupancy[faculty][day][slot] = session || true;
+        this.facultyOccupancy[faculty][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
     unmarkFacultyOccupied(faculty, day, slot) {
@@ -131,38 +317,42 @@ export class CollegeOccupancy {
         }
     }
 
-    markDivisionOccupied(divKey, day, slot, session) {
-        if (!this.divisionOccupancy[divKey]) this.divisionOccupancy[divKey] = {};
-        if (!this.divisionOccupancy[divKey][day]) this.divisionOccupancy[divKey][day] = {};
-        this.divisionOccupancy[divKey][day][slot] = session || true;
+    markDivisionOccupied(divKey, day, slot, session, dept) {
+        const key = this._resolveDivKey(divKey, dept || session?.department);
+        if (!this.divisionOccupancy[key]) this.divisionOccupancy[key] = {};
+        if (!this.divisionOccupancy[key][day]) this.divisionOccupancy[key][day] = {};
+        this.divisionOccupancy[key][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
     unmarkDivisionOccupied(divKey, day, slot) {
-        if (this.divisionOccupancy[divKey]?.[day]) {
-            delete this.divisionOccupancy[divKey][day][slot];
+        const key = this._resolveDivKey(divKey);
+        if (this.divisionOccupancy[key]?.[day]) {
+            delete this.divisionOccupancy[key][day][slot];
         }
     }
 
-    markBatchOccupied(batch, day, slot, session) {
+    markBatchOccupied(batch, day, slot, session, dept) {
         if (!batch) return;
-        if (!this.batchOccupancy[batch]) this.batchOccupancy[batch] = {};
-        if (!this.batchOccupancy[batch][day]) this.batchOccupancy[batch][day] = {};
-        this.batchOccupancy[batch][day][slot] = session || true;
+        const key = this._resolveBatchKey(batch, dept || session?.department);
+        if (!this.batchOccupancy[key]) this.batchOccupancy[key] = {};
+        if (!this.batchOccupancy[key][day]) this.batchOccupancy[key][day] = {};
+        this.batchOccupancy[key][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
     unmarkBatchOccupied(batch, day, slot) {
         if (!batch) return;
-        if (this.batchOccupancy[batch]?.[day]) {
-            delete this.batchOccupancy[batch][day][slot];
+        const key = this._resolveBatchKey(batch);
+        if (this.batchOccupancy[key]?.[day]) {
+            delete this.batchOccupancy[key][day][slot];
         }
     }
 
-    markLabOccupied(lab, day, slot, session) {
+    markLabOccupied(lab, day, slot, session, dept) {
         if (!lab || lab === "TBD") return;
         const norm = String(lab).toUpperCase().trim();
         if (!this.labOccupancy[norm]) this.labOccupancy[norm] = {};
         if (!this.labOccupancy[norm][day]) this.labOccupancy[norm][day] = {};
-        this.labOccupancy[norm][day][slot] = session || true;
+        this.labOccupancy[norm][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
     unmarkLabOccupied(lab, day, slot) {
@@ -173,20 +363,20 @@ export class CollegeOccupancy {
         }
     }
 
-    markClassroomOccupied(room, day, slot, session) {
+    markClassroomOccupied(room, day, slot, session, dept) {
         if (!room || room === "TBD") return;
         const norm = String(room).toUpperCase().trim();
         if (!this.classroomOccupancy[norm]) this.classroomOccupancy[norm] = {};
         if (!this.classroomOccupancy[norm][day]) this.classroomOccupancy[norm][day] = {};
-        this.classroomOccupancy[norm][day][slot] = session || true;
+        this.classroomOccupancy[norm][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
-    markTutorialRoomOccupied(room, day, slot, session) {
+    markTutorialRoomOccupied(room, day, slot, session, dept) {
         if (!room || room === "TBD") return;
         const norm = String(room).toUpperCase().trim();
         if (!this.tutorialRoomOccupancy[norm]) this.tutorialRoomOccupancy[norm] = {};
         if (!this.tutorialRoomOccupancy[norm][day]) this.tutorialRoomOccupancy[norm][day] = {};
-        this.tutorialRoomOccupancy[norm][day][slot] = session || true;
+        this.tutorialRoomOccupancy[norm][day][slot] = this._buildOccupancyRecord(session, dept);
     }
 
     // ─── AVAILABILITY CHECKS ─────────────────────────────────────────────────
@@ -215,9 +405,10 @@ export class CollegeOccupancy {
      * Check if a division slot is free and not locked by a global reservation.
      */
     isDivisionSlotFree(divKey, day, slot) {
-        if (this.globalReservations[divKey]?.[day]?.[slot]) return false;
-        if (this.divisionOccupancy[divKey]?.[day]?.[slot]) return false;
-        const cell = this.timetable[divKey]?.[day]?.[slot];
+        const key = this._resolveDivKey(divKey);
+        if (this.globalReservations[key]?.[day]?.[slot]) return false;
+        if (this.divisionOccupancy[key]?.[day]?.[slot]) return false;
+        const cell = (this.timetable[key] || this.timetable[divKey])?.[day]?.[slot];
         return cell === null || cell === undefined;
     }
 
@@ -231,7 +422,8 @@ export class CollegeOccupancy {
      */
     isBatchFree(batch, day, slot) {
         if (!batch) return true;
-        return !this.batchOccupancy[batch]?.[day]?.[slot];
+        const key = this._resolveBatchKey(batch);
+        return !this.batchOccupancy[key]?.[day]?.[slot];
     }
 
     isBatchFreeForPractical(batch, day, slot) {
@@ -241,13 +433,15 @@ export class CollegeOccupancy {
 
     getBatchDailyPracticalCount(batch, day) {
         if (!batch) return 0;
-        return this.batchDailyPracticalCount[batch]?.[day] || 0;
+        const key = this._resolveBatchKey(batch);
+        return this.batchDailyPracticalCount[key]?.[day] || 0;
     }
 
     incrementBatchDailyPracticalCount(batch, day) {
         if (!batch) return;
-        if (!this.batchDailyPracticalCount[batch]) this.batchDailyPracticalCount[batch] = {};
-        this.batchDailyPracticalCount[batch][day] = (this.batchDailyPracticalCount[batch][day] || 0) + 1;
+        const key = this._resolveBatchKey(batch);
+        if (!this.batchDailyPracticalCount[key]) this.batchDailyPracticalCount[key] = {};
+        this.batchDailyPracticalCount[key][day] = (this.batchDailyPracticalCount[key][day] || 0) + 1;
     }
 
     /**
@@ -362,7 +556,13 @@ export class CollegeOccupancy {
      * Updates faculty, batch, lab, and division occupancies.
      */
     commitPracticalGroup(divKey, day, slot, batchSessions, assignedLabs = []) {
-        if (!this.timetable[divKey]?.[day]) return false;
+        const dept = CollegeOccupancy.extractDeptFromDivKey(divKey)
+            || (batchSessions[0] && batchSessions[0].department)
+            || this.activeDepartment
+            || null;
+        const resolvedDivKey = this._resolveDivKey(divKey, dept);
+        const grid = this.timetable[resolvedDivKey] || this.timetable[divKey];
+        if (!grid?.[day]) return false;
 
         // v5.5: assignedLabs can be either:
         //   - Plain strings (legacy): "GEL"
@@ -394,6 +594,7 @@ export class CollegeOccupancy {
                     resourceType: "TUTORIAL_ROOM",
                     embeddedInLab: true,
                     labSubSlot: slot,
+                    department: dept || session.department,
                 });
             } else {
                 practicalAllocations.push({
@@ -404,6 +605,7 @@ export class CollegeOccupancy {
                     primaryLabInitial:  labInfo.primaryLab || session.primaryLabInitial,
                     fallbackLabInitial: labInfo.fallbackLab || null,
                     labAssignedReason:  labInfo.reason,
+                    department: dept || session.department,
                 });
             }
         });
@@ -412,6 +614,7 @@ export class CollegeOccupancy {
             type: "PRACTICAL",
             span: 2,
             fixed: false,
+            department: dept,
             batchAllocations: practicalAllocations,
             tutorialAllocations: tutorialAllocations.length > 0 ? tutorialAllocations : undefined,
         };
@@ -420,35 +623,36 @@ export class CollegeOccupancy {
             type: "PRACTICAL",
             span: 0,
             fixed: false,
+            department: dept,
             batchAllocations: practicalAllocations,
             tutorialAllocations: tutorialAllocations.length > 0 ? tutorialAllocations : undefined,
         };
 
         // Write to timetable
-        this.timetable[divKey][day][slot] = headCell;
-        this.timetable[divKey][day][slot + 1] = tailCell;
+        grid[day][slot] = headCell;
+        grid[day][slot + 1] = tailCell;
 
         // Mark division occupied
-        this.markDivisionOccupied(divKey, day, slot, headCell);
-        this.markDivisionOccupied(divKey, day, slot + 1, tailCell);
+        this.markDivisionOccupied(resolvedDivKey, day, slot, headCell, dept);
+        this.markDivisionOccupied(resolvedDivKey, day, slot + 1, tailCell, dept);
 
         // Update occupancies for each batch in the group
         batchSessions.forEach((session, idx) => {
             const labInfo = resolveLabInfo(assignedLabs[idx], idx);
             const roomOrLab = labInfo.labInitial;
-            this.markFacultyOccupied(session.faculty, day, slot, session);
-            this.markFacultyOccupied(session.faculty, day, slot + 1, session);
+            this.markFacultyOccupied(session.faculty, day, slot, session, dept);
+            this.markFacultyOccupied(session.faculty, day, slot + 1, session, dept);
 
-            this.markBatchOccupied(session.batch, day, slot, session);
-            this.markBatchOccupied(session.batch, day, slot + 1, session);
+            this.markBatchOccupied(session.batch, day, slot, session, dept);
+            this.markBatchOccupied(session.batch, day, slot + 1, session, dept);
 
             if (roomOrLab) {
                 if (session.type === "TUTORIAL") {
-                    this.markTutorialRoomOccupied(roomOrLab, day, slot, session);
-                    this.markTutorialRoomOccupied(roomOrLab, day, slot + 1, session);
+                    this.markTutorialRoomOccupied(roomOrLab, day, slot, session, dept);
+                    this.markTutorialRoomOccupied(roomOrLab, day, slot + 1, session, dept);
                 } else {
-                    this.markLabOccupied(roomOrLab, day, slot, session);
-                    this.markLabOccupied(roomOrLab, day, slot + 1, session);
+                    this.markLabOccupied(roomOrLab, day, slot, session, dept);
+                    this.markLabOccupied(roomOrLab, day, slot + 1, session, dept);
                 }
             }
 
@@ -463,31 +667,38 @@ export class CollegeOccupancy {
      * Commit a single 1-hour session (Tutorial or Lecture) atomically.
      */
     commitSingleSession(divKey, day, slot, session, assignedRoom = null) {
-        if (!this.timetable[divKey]?.[day]) return false;
+        const dept = CollegeOccupancy.extractDeptFromDivKey(divKey)
+            || session?.department
+            || this.activeDepartment
+            || null;
+        const resolvedDivKey = this._resolveDivKey(divKey, dept);
+        const grid = this.timetable[resolvedDivKey] || this.timetable[divKey];
+        if (!grid?.[day]) return false;
 
         const cell = {
             ...session,
             location: assignedRoom || session.location || "",
             span: 1,
             fixed: session.fixed !== undefined ? session.fixed : false,
+            department: dept || session.department,
         };
 
-        this.timetable[divKey][day][slot] = cell;
-        this.markDivisionOccupied(divKey, day, slot, cell);
+        grid[day][slot] = cell;
+        this.markDivisionOccupied(resolvedDivKey, day, slot, cell, dept);
 
         if (isRealFaculty(session.faculty)) {
-            this.markFacultyOccupied(session.faculty, day, slot, cell);
+            this.markFacultyOccupied(session.faculty, day, slot, cell, dept);
         }
 
         if (session.batch) {
-            this.markBatchOccupied(session.batch, day, slot, cell);
+            this.markBatchOccupied(session.batch, day, slot, cell, dept);
         }
 
         if (assignedRoom) {
             if (session.type === "TUTORIAL") {
-                this.markTutorialRoomOccupied(assignedRoom, day, slot, cell);
+                this.markTutorialRoomOccupied(assignedRoom, day, slot, cell, dept);
             } else {
-                this.markClassroomOccupied(assignedRoom, day, slot, cell);
+                this.markClassroomOccupied(assignedRoom, day, slot, cell, dept);
             }
         }
 

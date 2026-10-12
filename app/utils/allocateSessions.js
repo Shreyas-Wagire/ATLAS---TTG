@@ -273,19 +273,11 @@ function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources =
             }
         }
 
-        // Fallback: strictly embed in any existing practical cell (TY/BTECH tutorials NEVER take standalone division slots)
+        // If no compatible batch-free practical window exists, use a genuine
+        // free batch/division slot. Never force the tutorial into a practical
+        // cell that already contains this batch's practical.
         if (!tutSession.allocated) {
-            for (const day of DAYS) {
-                if (tutSession.allocated) break;
-                const daySlots = timetable[divKey]?.[day] || [];
-                for (let slot = 0; slot < 6; slot++) {
-                    const cell = daySlots[slot];
-                    if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2) continue;
-                    const labTailCell = daySlots[slot + 1];
-                    _embedTutorialInLabCell(cell, labTailCell, tutSession, slot, collegeOccupancy, day);
-                    break;
-                }
-            }
+            _placeTutorialInFreeSlot(tutSession, divKey, timetable, collegeOccupancy);
         }
     });
 
@@ -390,6 +382,10 @@ function allocateTutorials(timetable, sessionPool, collegeOccupancy, resources =
 function _embedTutorialInLabCell(labCell, labTailCell, tutSession, subSlot, collegeOccupancy, labDay) {
     if (!labCell) return;
 
+    // Defensive invariant: tutorial and practical are mutually exclusive for
+    // the same batch, even when another batch owns the practical cell.
+    if ((labCell.batchAllocations || []).some((allocation) => allocation.batch === tutSession.batch)) return false;
+
     if (!labCell.tutorialAllocations) labCell.tutorialAllocations = [];
     if (labTailCell && !labTailCell.tutorialAllocations) labTailCell.tutorialAllocations = [];
 
@@ -399,7 +395,7 @@ function _embedTutorialInLabCell(labCell, labTailCell, tutSession, subSlot, coll
     );
     if (alreadyEmbedded) {
         tutSession.allocated = true;
-        return;
+        return true;
     }
 
     const tutEntry = {
@@ -417,7 +413,9 @@ function _embedTutorialInLabCell(labCell, labTailCell, tutSession, subSlot, coll
     if (isRealFaculty(tutSession.faculty)) {
         collegeOccupancy.markFacultyOccupied(tutSession.faculty, labDay, subSlot, tutSession);
     }
+    if (tutSession.batch) collegeOccupancy.markBatchOccupied(tutSession.batch, labDay, subSlot, tutSession);
     tutSession.allocated = true;
+    return true;
 }
 
 /**

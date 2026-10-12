@@ -12,7 +12,7 @@ const SLOT_TIMES = [
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export function exportTimetable(timetable, report = null, extraReports = {}) {
-    if (!timetable || Object.keys(timetable).length === 0) return;
+    if (!timetable || Object.keys(timetable).length === 0) return null;
 
     try {
         const workbook = XLSX.utils.book_new();
@@ -22,8 +22,117 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
             resourceUtilizationReport,
             facultyTimetable,
             locationTimetable,
-            validationScore
+            validationScore,
+            // v6.5 Multi-department options
+            isMultiDept = false,
+            departmentOrder = [],
+            departmentResults = {},
+            facultyRegistryReport = null,
+            exportType = "full",
+            exportDepartment = "",
+            selectedSheets = null,
+            fileName = "",
+            exportFormat = "xlsx",
+            previewOnly = false,
         } = extraReports;
+
+        const effectiveMultiDept = isMultiDept || Object.keys(timetable).some((k) => k.includes(":"));
+
+        // Helper: Ensure worksheet names comply with Excel constraints (<= 31 chars, no invalid chars : \ / ? * [ ])
+        const usedSheetNames = new Set();
+        function getValidSheetName(baseName) {
+            let clean = String(baseName || "Sheet")
+                .replace(/[:\\/?*\[\]]/g, "-")
+                .replace(/\s+/g, " ")
+                .trim();
+            if (clean.length > 31) clean = clean.slice(0, 31);
+            if (!clean) clean = "Sheet";
+            let name = clean;
+            let idx = 1;
+            while (usedSheetNames.has(name.toLowerCase())) {
+                const suffix = `_${idx}`;
+                name = clean.slice(0, 31 - suffix.length) + suffix;
+                idx++;
+            }
+            usedSheetNames.add(name.toLowerCase());
+            return name;
+        }
+
+        // ─── 0. Department Summary Sheet (for multi-department workbooks) ───
+        if (effectiveMultiDept && (departmentOrder.length > 0 || Object.keys(departmentResults).length > 0)) {
+            const summaryRows = [
+                ["COLLEGE TIMETABLE — DEPARTMENT SUMMARY REPORT"],
+                [],
+                ["Department", "Divisions", "Total Sessions", "Allocated", "Unallocated", "Allocation Rate (%)", "Status"],
+            ];
+
+            let totalDivs = 0;
+            let totalSessions = 0;
+            let totalAllocated = 0;
+            let totalUnallocated = 0;
+
+            const depts = departmentOrder.length > 0 ? departmentOrder : Object.keys(departmentResults);
+
+            depts.forEach((dept) => {
+                const res = departmentResults[dept] || {};
+                const divCount = Object.keys(timetable).filter((k) => k.startsWith(`${dept}:`)).length;
+                const sCount = res.sessionCount || 0;
+                const aCount = res.allocatedCount || 0;
+                const uCount = res.unallocatedCount || 0;
+                const rate = sCount > 0 ? Math.round((aCount / sCount) * 100) : 100;
+                const status = uCount === 0 ? "100% Allocated" : `${uCount} Unallocated`;
+
+                totalDivs += divCount;
+                totalSessions += sCount;
+                totalAllocated += aCount;
+                totalUnallocated += uCount;
+
+                summaryRows.push([dept, divCount, sCount, aCount, uCount, `${rate}%`, status]);
+            });
+
+            const overallRate = totalSessions > 0 ? Math.round((totalAllocated / totalSessions) * 100) : 100;
+            summaryRows.push([]);
+            summaryRows.push([
+                "COLLEGE TOTAL",
+                totalDivs || Object.keys(timetable).length,
+                totalSessions,
+                totalAllocated,
+                totalUnallocated,
+                `${overallRate}%`,
+                totalUnallocated === 0 ? "Optimal" : `${totalUnallocated} Unallocated`,
+            ]);
+
+            // If there are unallocated sessions in report, list diagnostic details
+            const allMissing = [
+                ...(report?.missingLectures || []),
+                ...(report?.missingTutorials || []),
+                ...(report?.missingPracticals || []),
+            ];
+            if (allMissing.length > 0) {
+                summaryRows.push([]);
+                summaryRows.push(["UNALLOCATED SESSIONS DIAGNOSTIC BREAKDOWN"]);
+                summaryRows.push(["Department", "Class / Division", "Subject", "Type", "Batch", "Faculty", "Diagnostic Reason"]);
+                allMissing.forEach((s) => {
+                    const dept = s._dept || (s._deptDivKey ? s._deptDivKey.split(":")[0] : "-");
+                    const div = s._deptDivKey || `${s.year || ""}-${s.division || ""}`;
+                    summaryRows.push([
+                        dept,
+                        div,
+                        s.subject || s.courseName || "-",
+                        s.type || "-",
+                        s.batch || "-",
+                        s.faculty || "-",
+                        s.diagnosticReason || (s.rejectionReasons && s.rejectionReasons[0]) || "Resource / Faculty constraint",
+                    ]);
+                });
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(summaryRows);
+            ws["!cols"] = [
+                { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 20 }, { wch: 25 }, { wch: 45 }
+            ];
+            XLSX.utils.book_append_sheet(workbook, ws, getValidSheetName("Department Summary"));
+        }
 
         // ─── Helper: build a grid sheet matching official department format ───────
         function buildGridSheet(classKey, classData) {
@@ -102,13 +211,23 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
             return ws;
         }
 
-        // 1. Division Timetable Sheets (SY-A, SY-B, ..., BTECH-C)
+        // 1. Division Timetable Sheets (SY-A, SY-B, ..., BTECH-C, or CSE-SY-A in multi-dept)
+        const divisionSheetNames = new Set();
+        const departmentDivisionSheetNames = new Map();
         Object.entries(timetable).forEach(([classKey, daysMap]) => {
             const ws = buildGridSheet(classKey, daysMap);
-            XLSX.utils.book_append_sheet(workbook, ws, classKey);
+            const sheetName = getValidSheetName(classKey);
+            divisionSheetNames.add(sheetName);
+            const department = classKey.includes(":") ? classKey.split(":", 1)[0] : "";
+            if (department) {
+                if (!departmentDivisionSheetNames.has(department)) departmentDivisionSheetNames.set(department, new Set());
+                departmentDivisionSheetNames.get(department).add(sheetName);
+            }
+            XLSX.utils.book_append_sheet(workbook, ws, sheetName);
         });
 
         // 2. Faculty Timetables Sheet
+        let facultySheetName = null;
         if (facultyTimetable && Object.keys(facultyTimetable).length > 0) {
             const sheetData = [["Faculty", "Time Slot", ...DAYS]];
             Object.keys(facultyTimetable).sort().forEach((facKey) => {
@@ -125,10 +244,12 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                 sheetData.push([]);
             });
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
-            XLSX.utils.book_append_sheet(workbook, ws, "Faculty Timetables");
+            facultySheetName = getValidSheetName("Faculty Timetables");
+            XLSX.utils.book_append_sheet(workbook, ws, facultySheetName);
         }
 
         // 3. Location Timetables Sheet
+        let locationSheetName = null;
         if (locationTimetable && Object.keys(locationTimetable).length > 0) {
             const sheetData = [["Location", "Time Slot", ...DAYS]];
             Object.keys(locationTimetable).sort().forEach((locKey) => {
@@ -145,10 +266,40 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                 sheetData.push([]);
             });
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
-            XLSX.utils.book_append_sheet(workbook, ws, "Location Timetables");
+            locationSheetName = getValidSheetName("Location Timetables");
+            XLSX.utils.book_append_sheet(workbook, ws, locationSheetName);
         }
 
-        // 4. Faculty Workload Report Sheet
+        // 4. Faculty Registry Sheet (v6.5 College-wide identity reporting)
+        if (facultyRegistryReport && Object.keys(facultyRegistryReport.entries || {}).length > 0) {
+            const regRows = [
+                ["COLLEGE-WIDE FACULTY REGISTRY REPORT"],
+                [],
+                ["Total Faculty", facultyRegistryReport.totalFaculty || 0],
+                ["Shared Faculty Across Depts", (facultyRegistryReport.sharedFaculty || []).length],
+                ["Disambiguated Initials", (facultyRegistryReport.disambiguated || []).length],
+                [],
+                ["Canonical ID", "Original Initial", "Department(s)", "Shared Across Depts?", "Disambiguated?"],
+            ];
+
+            Object.entries(facultyRegistryReport.entries || {})
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([id, entry]) => {
+                    regRows.push([
+                        id,
+                        entry.originalInitial || id,
+                        (entry.departments || []).join(", ") || "-",
+                        entry.isShared ? "Yes (Shared)" : "No",
+                        entry.disambiguated ? "Yes (Resolved)" : "No",
+                    ]);
+                });
+
+            const ws = XLSX.utils.aoa_to_sheet(regRows);
+            ws["!cols"] = [{ wch: 20 }, { wch: 18 }, { wch: 25 }, { wch: 24 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(workbook, ws, getValidSheetName("Faculty Registry"));
+        }
+
+        // 5. Faculty Workload Report Sheet
         if (facultyWorkloadReport?.length > 0) {
             const rows = [
                 ["FACULTY WORKLOAD REPORT"],
@@ -158,10 +309,10 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     f.faculty, f.lectures, f.tutorials, f.practicals, f.totalHours, f.expectedHours, f.activeDays, f.status,
                 ]),
             ];
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Faculty Workload");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), getValidSheetName("Faculty Workload"));
         }
 
-        // 5. Resource Utilization Report Sheet
+        // 6. Resource Utilization Report Sheet
         if (resourceUtilizationReport?.resources?.length > 0) {
             const rows = [
                 ["RESOURCE UTILIZATION REPORT"],
@@ -171,10 +322,10 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     r.location, r.type, r.usedSlots, r.totalSlots, `${r.utilizationPercent}%`, r.status,
                 ]),
             ];
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Resource Utilization");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), getValidSheetName("Resource Utilization"));
         }
 
-        // 6. Conflict Report Sheet
+        // 7. Conflict Report Sheet
         if (conflictReport) {
             const rows = [
                 ["CONFLICT REPORT"],
@@ -189,10 +340,10 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                     c.description, c.suggestion,
                 ]),
             ];
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Conflict Report");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), getValidSheetName("Conflict Report"));
         }
 
-        // 7. Validation Score Sheet
+        // 8. Validation Score Sheet
         if (validationScore) {
             const { totalScore, grade, breakdown } = validationScore;
             const rows = [
@@ -207,21 +358,86 @@ export function exportTimetable(timetable, report = null, extraReports = {}) {
                 ["Resource Clash Free", breakdown?.resourceClash?.score || 10, 10, `${breakdown?.resourceClash?.clashes || 0} clash(es)`],
                 ["Break Violation Free", breakdown?.breakViolation?.score || 10, 10, `${breakdown?.breakViolation?.violations || 0} violation(s)`],
             ];
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Validation Score");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), getValidSheetName("Validation Score"));
+        }
+
+        // Keep the requested workbook section when a focused export was selected.
+        if (exportType === "selected" && Array.isArray(selectedSheets)) {
+            const allowedNames = new Set(selectedSheets);
+            workbook.SheetNames = workbook.SheetNames.filter((name) => allowedNames.has(name));
+            Object.keys(workbook.Sheets).forEach((name) => {
+                if (!allowedNames.has(name)) delete workbook.Sheets[name];
+            });
+            if (workbook.SheetNames.length === 0) return null;
+        } else if (exportType !== "full") {
+            const allowedNames = exportType === "division"
+                ? divisionSheetNames
+                : exportType === "department"
+                    ? departmentDivisionSheetNames.get(exportDepartment) || new Set()
+                    : new Set([
+                    exportType === "faculty" ? facultySheetName : locationSheetName,
+                ]);
+            workbook.SheetNames = workbook.SheetNames.filter((name) => allowedNames.has(name));
+            Object.keys(workbook.Sheets).forEach((name) => {
+                if (!allowedNames.has(name)) delete workbook.Sheets[name];
+            });
+            if (workbook.SheetNames.length === 0) return null;
+        }
+
+        if (previewOnly) return workbook;
+
+        const safeDepartment = String(exportDepartment).replace(/[<>:"/\\|?*]/g, "_").trim();
+        const defaultBaseName = exportType === "department" && safeDepartment
+            ? `${safeDepartment}_Timetables`
+            : exportType === "division" ? "Division_Timetables"
+                : exportType === "faculty" ? "Faculty_Timetables"
+                    : exportType === "location" ? "Location_Timetables"
+                        : effectiveMultiDept ? "College_Timetable_Master_Report" : "Timetable_Master_Report";
+        const baseName = String(fileName || defaultBaseName)
+            .replace(/\.(xlsx|pdf)$/i, "")
+            .replace(/[<>:"/\\|?*]/g, "_")
+            .trim() || defaultBaseName;
+
+        if (exportFormat === "pdf") {
+            if (typeof window === "undefined" || typeof document === "undefined") return workbook;
+            const escapeHtml = (value) => String(value ?? "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+            const sections = workbook.SheetNames.map((name) => {
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "" });
+                const tableRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("");
+                return `<section><h1>${escapeHtml(name)}</h1><table>${tableRows}</table></section>`;
+            }).join("");
+            const printWindow = window.open("", "_blank");
+            if (!printWindow) return null;
+            printWindow.document.open();
+            printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(baseName)}.pdf</title><style>
+                @page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font:9px Arial,sans-serif;color:#172033}h1{font-size:16px;margin:0 0 10px;color:#123f36}section{page-break-after:always}section:last-child{page-break-after:auto}table{border-collapse:collapse;width:100%;table-layout:auto}td{border:1px solid #aab5c4;padding:4px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}tr:first-child td{font-weight:bold;background:#e7f2ef}
+                </style></head><body>${sections}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.setTimeout(() => printWindow.print(), 350);
+            return workbook;
         }
 
         // Universal Browser Blob Download Triggers
         const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-        const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "Timetable_Master_Report.xlsx";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (typeof window !== "undefined" && typeof document !== "undefined") {
+            const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${baseName}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        return workbook;
     } catch (err) {
         console.error("Export Timetable Error:", err);
+        return null;
     }
 }
+

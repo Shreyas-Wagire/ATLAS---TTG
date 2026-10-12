@@ -90,23 +90,23 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
     }, {});
 
     return (
-        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-2xs overflow-hidden">
+        <div className="atlas-settings-card rounded-[22px] bg-white border border-[#e1e9e6] shadow-[0_12px_40px_-32px_rgba(20,57,51,0.3)] overflow-hidden">
             {/* Header */}
-            <div className="px-4 sm:px-6 py-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="px-5 sm:px-6 py-5 bg-white border-b border-[#edf1ef] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
+                    <div className="w-9 h-9 rounded-xl bg-[#edf6f3] border border-[#dcebe6] flex items-center justify-center text-[#3730a3]">
                         <UserCheck className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold text-[#0f172a]">
+                        <h3 className="text-sm font-bold tracking-tight text-[#142d2a]">
                             Faculty Availability Constraints
                         </h3>
-                        <p className="text-[11px] text-[#64748b] font-medium">
+                        <p className="text-xs text-[#71817d] mt-0.5">
                             Block morning / midday / afternoon sessions for specific faculty — enforced during generation
                         </p>
                     </div>
                 </div>
-                <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
+                <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe]">
                     {facultyConstraints.length} Constraint{facultyConstraints.length !== 1 ? "s" : ""}
                 </span>
             </div>
@@ -130,8 +130,8 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                 </div>
 
                 {/* Add Constraint Form */}
-                <form onSubmit={handleAdd} className="p-4 rounded-xl bg-[#ebf4f2]/60 border border-[#b8ccc8] space-y-4">
-                    <h4 className="text-xs font-extrabold uppercase text-[#0f766e] tracking-wider">
+                <form onSubmit={handleAdd} className="p-5 rounded-2xl bg-[#f7f9f8] border border-[#e7eeeb] space-y-4">
+                    <h4 className="text-xs font-extrabold uppercase text-[#3730a3] tracking-wider">
                         Add Faculty Availability Rule
                     </h4>
 
@@ -146,7 +146,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                                 placeholder="e.g. Prof. Sharma, HOD"
                                 value={facultyName}
                                 onChange={(e) => setFacultyName(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488] transition-colors"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca] transition-colors"
                                 required
                             />
                         </div>
@@ -159,7 +159,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                             <select
                                 value={day}
                                 onChange={(e) => setDay(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488] transition-colors cursor-pointer"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#4338ca] transition-colors cursor-pointer"
                             >
                                 {DAYS_OPTIONS.map((d) => (
                                     <option key={d.value} value={d.value}>{d.label}</option>
@@ -175,7 +175,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                             <select
                                 value={session}
                                 onChange={(e) => setSession(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488] transition-colors cursor-pointer"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#4338ca] transition-colors cursor-pointer"
                             >
                                 {SESSION_OPTIONS.map((s) => (
                                     <option key={s.value} value={s.value}>
@@ -193,7 +193,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488] transition-colors cursor-pointer"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#4338ca] transition-colors cursor-pointer"
                             >
                                 <option value="not_available">Not Available (Hard Block)</option>
                                 <option value="preferred">Prefer to Avoid (Soft Hint)</option>
@@ -204,7 +204,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                     <div className="flex justify-end">
                         <button
                             type="submit"
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4338ca] hover:bg-[#3730a3] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Add Availability Rule</span>
@@ -214,7 +214,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
 
                 {/* Active Constraints Grouped by Faculty */}
                 <div>
-                    <h4 className="text-xs font-extrabold uppercase text-[#0f766e] tracking-wider mb-3">
+                    <h4 className="text-xs font-extrabold uppercase text-[#3730a3] tracking-wider mb-3">
                         Active Faculty Availability Rules
                     </h4>
 
@@ -227,15 +227,15 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                             {Object.entries(groupedByFaculty).map(([name, rules]) => (
                                 <div
                                     key={name}
-                                    className="rounded-xl bg-white border border-[#b8ccc8] shadow-2xs overflow-hidden"
+                                    className="rounded-2xl bg-white border border-[#e1e9e6] shadow-xs overflow-hidden"
                                 >
                                     {/* Faculty Name Header */}
-                                    <div className="px-4 py-2.5 bg-[#ebf4f2] border-b border-[#b8ccc8] flex items-center gap-2">
-                                        <div className="w-5 h-5 rounded-full bg-[#0d9488] flex items-center justify-center text-white text-[9px] font-extrabold">
+                                    <div className="px-4 py-3 bg-[#f7f9f8] border-b border-[#edf1ef] flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-[#4338ca] flex items-center justify-center text-white text-[9px] font-extrabold">
                                             {name.charAt(0).toUpperCase()}
                                         </div>
                                         <span className="text-xs font-extrabold text-[#0f172a]">{name}</span>
-                                        <span className="ml-auto px-2 py-0.5 text-[10px] font-extrabold rounded bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
+                                        <span className="ml-auto px-2 py-0.5 text-[10px] font-extrabold rounded bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe]">
                                             {rules.length} rule{rules.length !== 1 ? "s" : ""}
                                         </span>
                                     </div>
@@ -259,7 +259,7 @@ export default function FacultyConstraints({ facultyConstraints = [], setFaculty
                                                         </span>
                                                         {/* Day Badge */}
                                                         <span className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ebf4f2] text-[#334155] text-[10px] font-bold">
-                                                            <Calendar className="w-3 h-3 text-[#0f766e]" />
+                                                            <Calendar className="w-3 h-3 text-[#3730a3]" />
                                                             {dayLabel}
                                                         </span>
                                                         {/* Type Badge */}

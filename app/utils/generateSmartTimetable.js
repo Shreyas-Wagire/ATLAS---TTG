@@ -34,7 +34,8 @@ export function generateSmartTimetable(
     resources = {},
     maxTrials = 50,
     facultyAvailability = {},
-    loadSubjects = []
+    loadSubjects = [],
+    onProgress = null
 ) {
     // ── v5.5: Build course → lab resolution ONCE before any trial ────────────
     // This uses LOAD (loadSubjects) and Location (resources.locationData) as
@@ -66,6 +67,9 @@ export function generateSmartTimetable(
     let bestCascResults = [];
 
     for (let trial = 1; trial <= maxTrials; trial++) {
+        if (typeof onProgress === "function") {
+            onProgress(`Generation trial ${trial}/${maxTrials}`, Math.round((trial / maxTrials) * 88));
+        }
         const clonedGroupedData = JSON.parse(JSON.stringify(groupedData));
         const timetableObj = createEmptyTimetable(clonedGroupedData);
 
@@ -145,9 +149,11 @@ export function generateSmartTimetable(
             conflictReport.summary.TUTORIAL_ROOM_CLASH;
         const breakViolations = conflictReport.summary.PRACTICAL_BREAK_VIOLATION;
         const resourceShortageCount = (report.resourceShortages || []).length;
+        const batchOverlapCount = conflictReport.summary.BATCH_SESSION_OVERLAP || 0;
 
         const penalty =
             unallocatedCount * 100000 +
+            batchOverlapCount * 100000 +
             resourceShortageCount * 50000 +
             facultyClashCount * 10000 +
             resourceClashCount * 500 +
@@ -170,7 +176,13 @@ export function generateSmartTimetable(
     }
 
     // ── POST-GENERATION OPTIMIZATION ─────────────────────────────────────
-    const { timetable: optimizedTimetable, optimizationReport } = optimizeTimetable(bestTimetable);
+    if (typeof onProgress === "function") onProgress("Optimizing timetable", 92);
+    const baselineTimetable = JSON.parse(JSON.stringify(bestTimetable));
+    const { timetable: optimizedTimetable, optimizationReport: initialOptimizationReport } = optimizeTimetable(
+        JSON.parse(JSON.stringify(bestTimetable)),
+    );
+    let finalOptimizationReport = initialOptimizationReport;
+    if (typeof onProgress === "function") onProgress("Validating schedule and preparing reports", 97);
 
     const winningSessionPool = bestSessionPool || (() => {
         const cloned = JSON.parse(JSON.stringify(groupedData));
@@ -178,32 +190,67 @@ export function generateSmartTimetable(
         return generateSessionPool(cloned, syncRules, courseLabResolutions);
     })();
 
-    const facultyWorkloadReport = generateFacultyWorkloadReport(optimizedTimetable, winningSessionPool);
-    const resourceUtilizationReport = generateResourceUtilizationReport(optimizedTimetable, resources);
-    const batchTimetable = generateBatchTimetable(optimizedTimetable);
-    const facultyTimetable = generateFacultyTimetable(optimizedTimetable);
-    const locationTimetable = generateLocationTimetable(optimizedTimetable);
-    const validationScore = computeValidationScore(bestReport, bestConflictReport);
+    // Optimization can move cells after trial validation. Refresh room
+    // assignments and diagnostics against the final timetable users receive.
+    allocateResources(baselineTimetable, resources);
+    const baselineReport = validateTimetable(baselineTimetable, winningSessionPool, resources);
+    const baselineConflictReport = generateConflictReport(baselineTimetable, winningSessionPool, globalConstraints);
+    allocateResources(optimizedTimetable, resources);
+    const optimizedReport = validateTimetable(optimizedTimetable, winningSessionPool, resources);
+    const optimizedConflictReport = generateConflictReport(optimizedTimetable, winningSessionPool, globalConstraints);
+    const hardConstraintScore = (report, conflicts) => {
+        const summary = conflicts?.summary || {};
+        return ((report?.unallocatedSessions || 0) * 1_000_000)
+            + ((report?.resourceShortages || []).length * 100_000)
+            + ((summary.BATCH_SESSION_OVERLAP || 0) * 1_000_000)
+            + ((summary.FIXED_CONSTRAINT_VIOLATION || 0) * 1_000_000)
+            + ((summary.FACULTY_CLASH || 0) * 100_000)
+            + ((summary.ROOM_CLASH || 0) * 100_000)
+            + ((summary.LAB_CLASH || 0) * 100_000)
+            + ((summary.TUTORIAL_ROOM_CLASH || 0) * 100_000)
+            + ((summary.PRACTICAL_BREAK_VIOLATION || 0) * 100_000)
+            + ((summary.PRACTICAL_FACULTY_DUPLICATE_BATCH || 0) * 100_000)
+            + ((summary.SAME_COURSE_DUPLICATE_LECTURE_PER_DAY || 0) * 50_000);
+    };
+    const useBaseline = hardConstraintScore(optimizedReport, optimizedConflictReport)
+        > hardConstraintScore(baselineReport, baselineConflictReport);
+    const finalTimetable = useBaseline ? baselineTimetable : optimizedTimetable;
+    const finalReport = useBaseline ? baselineReport : optimizedReport;
+    const finalConflictReport = useBaseline ? baselineConflictReport : optimizedConflictReport;
+    if (useBaseline) {
+        finalOptimizationReport = {
+            ...(finalOptimizationReport || {}),
+            safetyFallback: true,
+            safetyFallbackReason: "Soft optimization introduced hard timetable conflicts; the validated schedule was kept.",
+        };
+    }
+
+    const facultyWorkloadReport = generateFacultyWorkloadReport(finalTimetable, winningSessionPool);
+    const resourceUtilizationReport = generateResourceUtilizationReport(finalTimetable, resources);
+    const batchTimetable = generateBatchTimetable(finalTimetable);
+    const facultyTimetable = generateFacultyTimetable(finalTimetable);
+    const locationTimetable = generateLocationTimetable(finalTimetable);
+    const validationScore = computeValidationScore(finalReport, finalConflictReport);
 
     // ── ALGORITHM DIAGNOSTIC REPORTS ──────────────────────────────────────
-    const rcaaReport = generateRCAAReport(optimizedTimetable, resources);
+    const rcaaReport = generateRCAAReport(finalTimetable, resources);
     const dapsReport = generateDAPSReport(bestDapsDiagnostics);
     const cascReport = generateCASCReport(bestCascResults);
 
     // ── ATTACH PRECISE UNALLOCATED REASONS ──────────────────────────────
-    if (bestReport) {
-        const tempOccupancy = new CollegeOccupancy(optimizedTimetable, resources, facultyAvailability);
-        tempOccupancy.lockGlobalSessions(optimizedTimetable, globalConstraints);
+    if (finalReport) {
+        const tempOccupancy = new CollegeOccupancy(finalTimetable, resources, facultyAvailability);
+        tempOccupancy.lockGlobalSessions(finalTimetable, globalConstraints);
         const allMissing = [
-            ...(bestReport.missingLectures || []),
-            ...(bestReport.missingTutorials || []),
-            ...(bestReport.missingPracticals || []),
+            ...(finalReport.missingLectures || []),
+            ...(finalReport.missingTutorials || []),
+            ...(finalReport.missingPracticals || []),
         ];
         allMissing.forEach((s) => {
-            const reasons = analyzeUnallocatedSession(s, optimizedTimetable, tempOccupancy);
+            const reasons = analyzeUnallocatedSession(s, finalTimetable, tempOccupancy);
             s.rejectionReasons = reasons;
             const divKey = `${s.year}-${s.division}`;
-            const divOccupied = Object.values(optimizedTimetable[divKey] || {}).reduce((acc, row) => acc + (row || []).filter(Boolean).length, 0);
+            const divOccupied = Object.values(finalTimetable[divKey] || {}).reduce((acc, row) => acc + (row || []).filter(Boolean).length, 0);
             if (divOccupied >= 30) {
                 s.diagnosticReason = `Division ${divKey} schedule fully saturated (${divOccupied}/30 periods filled). Course load exceeds weekly 30h timetable capacity.`;
             } else if (reasons.length > 0) {
@@ -215,16 +262,16 @@ export function generateSmartTimetable(
     }
 
     return {
-        timetable: optimizedTimetable,
-        report: bestReport,
-        conflictReport: bestConflictReport,
+        timetable: finalTimetable,
+        report: finalReport,
+        conflictReport: finalConflictReport,
         facultyWorkloadReport,
         resourceUtilizationReport,
         batchTimetable,
         facultyTimetable,
         locationTimetable,
         validationScore,
-        optimizationReport,
+        optimizationReport: finalOptimizationReport,
         rcaaReport,
         dapsReport,
         cascReport,
@@ -298,9 +345,17 @@ function selfHealingRepairLoop(timetable, sessionPool, globalConstraints, resour
 
                         // Try merging into existing practical block first (max 4 parallel batches per division)
                         if (cur?.type === "PRACTICAL" && cur.span === 2 && nxt?.type === "PRACTICAL" && nxt.span === 0) {
-                            if ((cur.batchAllocations || []).length < 4) {
-                                const existBatches = new Set((cur.batchAllocations || []).map((b) => b.batch));
-                                const existFaculties = new Set((cur.batchAllocations || []).map((b) => b.faculty).filter(Boolean));
+                            const currentTutorials = cur.tutorialAllocations || [];
+                            const existingAllocationCount = (cur.batchAllocations || []).length + currentTutorials.length;
+                            if (existingAllocationCount < 4) {
+                                const existBatches = new Set([
+                                    ...(cur.batchAllocations || []).map((b) => b.batch),
+                                    ...currentTutorials.map((t) => t.batch),
+                                ]);
+                                const existFaculties = new Set([
+                                    ...(cur.batchAllocations || []).map((b) => b.faculty),
+                                    ...currentTutorials.map((t) => t.faculty),
+                                ].filter(Boolean));
                                 if (!existBatches.has(session.batch) && (!session.faculty || !existFaculties.has(session.faculty))) {
                                     if (!cur.batchAllocations) cur.batchAllocations = [];
                                     cur.batchAllocations.push(session);
@@ -490,6 +545,11 @@ function buildFacultySchedule(timetable, days) {
                 if (cell.batchAllocations) {
                     cell.batchAllocations.forEach((b) => markBusyInSchedule(schedule, b.faculty, day, slot));
                 }
+                if (cell.tutorialAllocations) {
+                    cell.tutorialAllocations.forEach((t) => {
+                        if ((t.labSubSlot ?? slot) === slot) markBusyInSchedule(schedule, t.faculty, day, slot);
+                    });
+                }
             });
         });
     });
@@ -540,7 +600,8 @@ function getCollegeOccupiedLabCount(timetable, day, slot) {
  * the first allocateTutorials pass), this function looks up the scheduled practical
  * for that batch + subject and embeds the tutorial into it using tutorialAllocations.
  *
- * Falls back to any free division slot if still no lab found.
+ * Falls back to a genuinely free batch/division slot if no compatible lab
+ * window is available; it must never create a batch practical/tutorial clash.
  */
 function _retryLabPairedTutorials(timetable, sessionPool, collegeOccupancy) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -561,6 +622,7 @@ function _retryLabPairedTutorials(timetable, sessionPool, collegeOccupancy) {
 
         let labDay = null;
         let labSlot = null;
+        let labSubSlot = null;
 
         outer:
         for (const day of days) {
@@ -573,26 +635,28 @@ function _retryLabPairedTutorials(timetable, sessionPool, collegeOccupancy) {
                 if (batchAllocations.some((b) => b.batch === tutSession.batch)) continue;
                 if (tutorialAllocations.some((t) => t.batch === tutSession.batch)) continue;
 
-                if (collegeOccupancy.isFacultyFree(tutSession.faculty, day, slot) ||
-                    collegeOccupancy.isFacultyFree(tutSession.faculty, day, slot + 1)) {
+                for (const subSlot of [slot, slot + 1]) {
+                    if (!collegeOccupancy.isFacultyFree(tutSession.faculty, day, subSlot) ||
+                        !collegeOccupancy.isBatchFree(tutSession.batch, day, subSlot)) continue;
                     labDay = day;
                     labSlot = slot;
+                    labSubSlot = subSlot;
                     break outer;
                 }
             }
         }
 
-        // Fallback: embed into any practical cell in the division
+        // If there is no valid parallel lab window, allocate a standalone
+        // tutorial only when this batch, faculty, and division are all free.
         if (labDay === null) {
-            outerAny:
             for (const day of days) {
-                const daySlots = timetable[divKey]?.[day] || [];
+                if (tutSession.allocated) break;
                 for (let slot = 0; slot < 6; slot++) {
-                    const cell = daySlots[slot];
-                    if (!cell || cell.type !== "PRACTICAL" || cell.span !== 2) continue;
-                    labDay = day;
-                    labSlot = slot;
-                    break outerAny;
+                    if (!collegeOccupancy.isDivisionSlotFree(divKey, day, slot) ||
+                        !collegeOccupancy.isBatchFree(tutSession.batch, day, slot) ||
+                        !collegeOccupancy.isFacultyFree(tutSession.faculty, day, slot)) continue;
+                    collegeOccupancy.commitSingleSession(divKey, day, slot, tutSession);
+                    break;
                 }
             }
         }
@@ -614,14 +678,15 @@ function _retryLabPairedTutorials(timetable, sessionPool, collegeOccupancy) {
                     resourceType: "TUTORIAL_ROOM",
                     location: "",
                     embeddedInLab: true,
-                    labSubSlot: labSlot,
+                    labSubSlot,
                 };
                 labCell.tutorialAllocations.push(tutEntry);
                 if (labTailCell) labTailCell.tutorialAllocations = labCell.tutorialAllocations;
 
                 if (isRealFac(tutSession.faculty)) {
-                    collegeOccupancy.markFacultyOccupied(tutSession.faculty, labDay, labSlot, tutSession);
+                    collegeOccupancy.markFacultyOccupied(tutSession.faculty, labDay, labSubSlot, tutSession);
                 }
+                collegeOccupancy.markBatchOccupied(tutSession.batch, labDay, labSubSlot, tutSession);
             }
             tutSession.allocated = true;
             return;

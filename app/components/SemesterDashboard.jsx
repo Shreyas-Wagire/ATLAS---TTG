@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
     Plus, Calendar, BookOpen, BarChart3, Trash2, LogIn,
-    Eye, Archive, Sparkles, Clock, Building2, Hash,
+    Eye, Archive, Sparkles, Clock, Building2,
     CheckCircle2, AlertTriangle, Circle, Layers,
     GraduationCap, Search, ArrowRight, X, MoreVertical,
     FileSpreadsheet, Check
@@ -20,7 +21,7 @@ const STATUS_CONFIG = {
         label: "Active",
         badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
         dot: "bg-emerald-500",
-        line: "bg-gradient-to-r from-[#0d9488] to-[#14b8a6]",
+        line: "bg-gradient-to-r from-[#4338ca] to-[#b08d57]",
     },
     draft: {
         label: "Draft",
@@ -36,6 +37,16 @@ const STATUS_CONFIG = {
     },
 };
 
+function getWorkspaceTitle(semester) {
+    const name = semester.name?.trim();
+    const legacySemesterName = /^(?:semester\s+(?:[ivx]+|\d+)|sem\s*\d+|(?:odd|even)\s+sem)(?:\s*\([^)]*\)|\s+\d{4}[-–]\d{2,4})?$/i;
+    return !name || legacySemesterName.test(name) ? "Timetable workspace" : name;
+}
+
+function formatAcademicYear(year) {
+    return year ? String(year).replace(/-/g, "–") : "Academic year not set";
+}
+
 function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
     const stats = getSemesterStats(semester);
     const cfg = STATUS_CONFIG[semester.status] || STATUS_CONFIG.draft;
@@ -49,19 +60,28 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
     });
 
     return (
-        <div className="group relative bg-white rounded-2xl border border-[#b8ccc8]/70 shadow-xs hover:shadow-lg hover:border-[#0d9488]/40 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col justify-between">
+        <motion.article
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6, scale: 0.985 }}
+            whileHover={{ y: -3, boxShadow: "0 22px 48px -32px rgba(20,57,51,0.38)" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="group relative flex flex-col justify-between overflow-visible rounded-[24px] border border-[#e3ebe7] bg-white shadow-[0_10px_32px_-27px_rgba(20,57,51,0.3)]"
+        >
             {/* Top accent indicator line */}
-            <div className={`h-1.5 w-full ${cfg.line}`} />
+            <div className={`absolute inset-x-5 top-0 h-[3px] rounded-b-full ${cfg.line}`} />
 
-            <div className="p-5 flex flex-col gap-4 flex-1">
+            <div className="flex flex-1 flex-col gap-4 p-5 sm:p-5.5">
                 {/* Header: Badges & Actions */}
                 <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2.5 py-0.5 text-[10px] font-extrabold rounded-md bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]/80 tracking-wide">
-                            SEM {semester.semNumber}
+                    <div className="flex min-w-0 items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e3ebe7] bg-[#f7faf8] px-2.5 py-1 text-[10px] font-bold tracking-wide text-[#58716a]">
+                            <Calendar className="h-3 w-3 text-[#4338ca]" />
+                            AY {semester.academicYear ? formatAcademicYear(semester.academicYear) : "—"}
                         </span>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-extrabold rounded-md border ${cfg.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${semester.status === "active" ? "animate-pulse" : ""}`} />
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${cfg.badge}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
                             {cfg.label}
                         </span>
                     </div>
@@ -70,9 +90,9 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
                     <div className="relative">
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                            className="p-1 rounded-lg text-[#94a3b8] hover:text-[#0f172a] hover:bg-[#ebf4f2] transition-colors cursor-pointer"
-                            title="Semester Options"
-                            aria-label="Semester options"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-[#879791] transition-colors hover:bg-[#f1f6f3] hover:text-[#294943] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40"
+                            title="Workspace options"
+                            aria-label="Workspace options"
                         >
                             <MoreVertical className="w-4 h-4" />
                         </button>
@@ -128,53 +148,56 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
                     </div>
                 </div>
 
-                {/* Semester Title & Meta */}
-                <div>
-                    <h3 className="text-base font-extrabold text-[#0f172a] leading-tight group-hover:text-[#0d9488] transition-colors truncate">
-                        {semester.name}
+                {/* Workspace Title & Meta */}
+                <div className="min-w-0">
+                    <h3 className="truncate text-[17px] font-extrabold leading-tight tracking-[-0.035em] text-[#1e1b4b] transition-colors duration-200 group-hover:text-[#3730a3]">
+                        {getWorkspaceTitle(semester)}
                     </h3>
-                    <p className="text-xs text-[#64748b] font-medium mt-1 flex items-center gap-1.5">
-                        <span>{semester.academicYear}</span>
+                    <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-[#7d8e88]">
                         {semester.department && (
                             <>
-                                <span className="text-[#cbd5e1]">•</span>
                                 <span className="truncate">{semester.department}</span>
+                                <span className="text-[#cbd5e1]">·</span>
+                                <span className="truncate">All year levels</span>
                             </>
+                        )}
+                        {!semester.department && (
+                            <span className="truncate">All year levels</span>
                         )}
                     </p>
                 </div>
 
-                {/* Metrics Summary Strip */}
-                <div className="grid grid-cols-3 gap-2 bg-[#f8fafb] rounded-xl p-2.5 border border-[#e2e8f0]/80">
-                    <div className="text-center">
-                        <div className={`text-sm font-extrabold ${stats.allocationRate === 100 ? "text-[#0d9488]" : stats.allocationRate > 0 ? "text-amber-600" : "text-[#94a3b8]"}`}>
-                            {stats.hasData ? `${stats.allocationRate}%` : "—"}
+                {stats.hasData ? (
+                    <div className="grid grid-cols-3 divide-x divide-[#e8eeeb] rounded-2xl border border-[#e8eeeb] bg-[#f8faf9] px-2 py-3">
+                        <div className="text-center">
+                            <div className={`text-sm font-extrabold ${stats.allocationRate === 100 ? "text-[#4338ca]" : stats.allocationRate > 0 ? "text-amber-600" : "text-[#94a3b8]"}`}>{stats.allocationRate}%</div>
+                            <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#83928d]">Allocated</div>
                         </div>
-                        <div className="text-[9px] font-bold text-[#64748b] uppercase tracking-wider mt-0.5">Allocation</div>
-                    </div>
-                    <div className="text-center border-x border-[#e2e8f0]">
-                        <div className={`text-sm font-extrabold ${!stats.hasData ? "text-[#94a3b8]" : stats.conflictCount === 0 ? "text-[#0d9488]" : "text-red-600"}`}>
-                            {stats.hasData ? stats.conflictCount : "—"}
+                        <div className="text-center">
+                            <div className={`text-sm font-extrabold ${stats.conflictCount === 0 ? "text-[#4338ca]" : "text-red-600"}`}>{stats.conflictCount}</div>
+                            <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#83928d]">Conflicts</div>
                         </div>
-                        <div className="text-[9px] font-bold text-[#64748b] uppercase tracking-wider mt-0.5">Conflicts</div>
-                    </div>
-                    <div className="text-center">
-                        <div className={`text-sm font-extrabold ${!stats.hasData ? "text-[#94a3b8]" : stats.validationScore >= 90 ? "text-[#0d9488]" : stats.validationScore > 70 ? "text-amber-600" : "text-[#64748b]"}`}>
-                            {stats.hasData ? stats.validationScore : "—"}
+                        <div className="text-center">
+                            <div className={`text-sm font-extrabold ${stats.validationScore >= 90 ? "text-[#4338ca]" : stats.validationScore > 70 ? "text-amber-600" : "text-[#64748b]"}`}>{stats.validationScore}</div>
+                            <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#83928d]">Quality</div>
                         </div>
-                        <div className="text-[9px] font-bold text-[#64748b] uppercase tracking-wider mt-0.5">Quality</div>
                     </div>
-                </div>
+                ) : (
+                    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#dce8e2] bg-[#f9fbfa] px-3.5 py-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#4338ca] shadow-[0_2px_8px_rgba(20,57,51,0.06)]"><FileSpreadsheet className="h-4 w-4" /></span>
+                        <span className="min-w-0"><span className="block text-xs font-bold text-[#49645e]">Ready for workbook</span><span className="mt-0.5 block text-[10px] text-[#91a09b]">Course loads for all year levels</span></span>
+                    </div>
+                )}
 
                 {/* Timestamps */}
-                <div className="flex items-center justify-between text-[11px] text-[#94a3b8] font-medium pt-1">
+                <div className="flex items-center justify-between gap-2 pt-0.5 text-[10px] font-medium text-[#93a19c]">
                     <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#94a3b8]" />
+                            <Clock className="h-3 w-3 text-[#a0aea9]" />
                         Created {createdDate}
                     </span>
                     {semester.status === "active" && (
-                        <span className="flex items-center gap-1 text-[#0f766e] font-semibold">
-                            <CheckCircle2 className="w-3 h-3 text-[#0d9488]" />
+                        <span className="flex items-center gap-1 text-[#3730a3] font-semibold">
+                            <CheckCircle2 className="h-3 w-3 text-[#4338ca]" />
                             {updatedDate}
                         </span>
                     )}
@@ -182,13 +205,15 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
             </div>
 
             {/* Action Footer */}
-            <div className="px-5 pb-5 pt-1">
-                <button
+            <div className="px-5 pb-5 pt-1 sm:px-5">
+                <motion.button
                     onClick={() => onEnter(semester)}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.985 }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer ${
                         semester.status === "archived"
-                            ? "bg-[#ebf4f2] text-[#0f766e] hover:bg-[#ccfbf1] border border-[#b8ccc8]/70"
-                            : "bg-[#0d9488] hover:bg-[#0f766e] text-white shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99]"
+                            ? "bg-[#eef5f2] text-[#3730a3] hover:bg-[#e3f0eb] border border-[#dce8e2]"
+                            : "bg-[#1e1b4b] hover:bg-[#3730a3] text-white shadow-[0_6px_16px_-11px_rgba(30,27,75,0.75)] hover:shadow-md"
                     }`}
                 >
                     {semester.status === "archived" ? (
@@ -198,13 +223,13 @@ function SemesterCard({ semester, onEnter, onDelete, onStatusChange }) {
                         </>
                     ) : (
                         <>
-                            <span>Open Studio</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <span>Open workspace</span>
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
                         </>
                     )}
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.article>
     );
 }
 
@@ -224,7 +249,7 @@ export default function SemesterDashboard({ onEnterSemester }) {
     };
 
     const handleDelete = (id) => {
-        if (confirm("Permanently delete this semester? This action cannot be undone.")) {
+        if (confirm("Permanently delete this workspace? This action cannot be undone.")) {
             deleteSemester(id);
             refresh();
         }
@@ -251,44 +276,45 @@ export default function SemesterDashboard({ onEnterSemester }) {
             return (
                 (s.name && s.name.toLowerCase().includes(q)) ||
                 (s.academicYear && s.academicYear.toLowerCase().includes(q)) ||
-                (s.department && s.department.toLowerCase().includes(q)) ||
-                `sem ${s.semNumber}`.includes(q)
+                (s.department && s.department.toLowerCase().includes(q))
             );
         });
     }, [semesters, filter, searchQuery]);
 
     return (
-        <div className="space-y-6 py-2">
+        <div className="space-y-8 py-3">
             {/* ── Section Header & Single Primary Action (No Redundancy!) ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0d9488] shadow-xs shrink-0">
+                    <div className="w-11 h-11 rounded-2xl bg-white border border-[#e1e9e6] flex items-center justify-center text-[#3730a3] shadow-[0_6px_18px_-12px_rgba(20,57,51,0.3)] shrink-0">
                         <Layers className="w-5 h-5" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-extrabold text-[#0f172a] tracking-tight">
-                            Semester Workspaces
+                        <h1 className="text-2xl sm:text-[28px] font-bold text-[#142d2a] tracking-[-0.035em]">
+                            Timetable Workspaces
                         </h1>
-                        <p className="text-xs text-[#64748b] font-medium">
-                            Select an active semester workspace or launch a new one to generate and manage timetables
+                        <p className="text-sm text-[#71817d] mt-1">
+                            Organize each academic year’s workbook, setup, and generated timetable in one place.
                         </p>
                     </div>
                 </div>
 
                 {/* Primary CTA: Only 1 clean, high-priority button */}
-                <button
+                <motion.button
                     onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer self-start sm:self-auto shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex shrink-0 cursor-pointer items-center gap-2 self-start rounded-xl bg-[#1e1b4b] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-[#0d766b] hover:shadow-md sm:self-auto"
                 >
                     <Plus className="w-4 h-4" />
-                    <span>New Semester</span>
-                </button>
+                    <span>New Workspace</span>
+                </motion.button>
             </div>
 
             {/* ── Consolidated Filter Tabs & Search Bar (Merged from duplicate rows) ── */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
                 {/* Unified Segmented Filter Pills */}
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-white/70 border border-[#b8ccc8]/80 shadow-2xs backdrop-blur-xs overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-white border border-[#e1e9e6] overflow-x-auto no-scrollbar">
                     {[
                         { key: "all", label: "All" },
                         { key: "active", label: "Active" },
@@ -298,22 +324,23 @@ export default function SemesterDashboard({ onEnterSemester }) {
                         const count = counts[key];
                         const isSelected = filter === key;
                         return (
-                            <button
-                                key={key}
-                                onClick={() => setFilter(key)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all duration-150 cursor-pointer shrink-0 ${
-                                    isSelected
-                                        ? "bg-[#0d9488] text-white shadow-xs"
-                                        : "text-[#64748b] hover:text-[#0f172a] hover:bg-[#ebf4f2]/70"
-                                }`}
-                            >
-                                <span>{label}</span>
-                                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                                    isSelected ? "bg-white/20 text-white" : "bg-[#ebf4f2] text-[#64748b]"
-                                }`}>
-                                    {count}
-                                </span>
-                            </button>
+                    <motion.button
+                        key={key}
+                        type="button"
+                        onClick={() => setFilter(key)}
+                        whileTap={{ scale: 0.96 }}
+                        className={`relative flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold transition-colors duration-200 ${
+                            isSelected ? "text-white" : "text-[#71817d] hover:bg-[#f1f6f4] hover:text-[#243d39]"
+                        }`}
+                    >
+                        {isSelected && <motion.span layoutId="workspace-filter-active" className="absolute inset-0 rounded-lg bg-[#1e1b4b] shadow-sm" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                        <span className="relative">{label}</span>
+                        <span className={`relative rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                            isSelected ? "bg-white/20 text-white" : "bg-[#ebf4f2] text-[#64748b]"
+                        }`}>
+                            {count}
+                        </span>
+                    </motion.button>
                         );
                     })}
                 </div>
@@ -323,42 +350,48 @@ export default function SemesterDashboard({ onEnterSemester }) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8]" />
                     <input
                         type="text"
-                        placeholder="Search semesters, years..."
+                    placeholder="Search workspaces or academic years…"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-1.5 bg-white rounded-xl border border-[#b8ccc8]/80 text-xs font-semibold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488] focus:ring-1 focus:ring-[#0d9488]/30 shadow-2xs transition-all"
+                        className="w-full pl-10 pr-8 py-2.5 bg-white rounded-xl border border-[#e1e9e6] text-sm font-medium text-[#243d39] placeholder-[#98a6a2] focus:outline-none focus:border-[#75b5a4] focus:ring-4 focus:ring-[#4338ca]/[0.08] shadow-xs transition-all"
                     />
                     {searchQuery && (
-                        <button
+                        <motion.button
+                            type="button"
                             onClick={() => setSearchQuery("")}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a] p-0.5 cursor-pointer"
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.92 }}
+                            aria-label="Clear search"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer p-0.5 text-[#94a3b8] transition-colors hover:text-[#0f172a]"
                         >
                             <X className="w-3.5 h-3.5" />
-                        </button>
+                        </motion.button>
                     )}
                 </div>
             </div>
 
-            {/* ── Semester Cards Grid (Clean, real workspaces only) ── */}
+            {/* ── Timetable Workspaces ── */}
             {semesters.length === 0 ? (
-                /* Empty state when NO semesters exist yet */
-                <div className="bg-white/80 border border-[#b8ccc8]/70 rounded-3xl p-10 sm:p-14 text-center max-w-xl mx-auto shadow-sm backdrop-blur-xs flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center mb-5 text-[#0d9488]">
-                        <GraduationCap className="w-8 h-8" />
+                /* Empty state when no timetable workspaces exist yet */
+                <div className="mx-auto flex max-w-xl flex-col items-center rounded-[28px] border border-[#e1e9e6] bg-white/85 p-10 text-center shadow-[0_20px_60px_-46px_rgba(20,57,51,0.4)] backdrop-blur-sm sm:p-14">
+                    <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-[#d8e9de] bg-[#eef7f2] text-[#4338ca]">
+                        <Layers className="h-7 w-7" />
                     </div>
-                    <h3 className="text-lg font-extrabold text-[#0f172a] mb-2">
-                        No Semesters Configured
+                    <h3 className="mb-2 text-lg font-extrabold text-[#1e1b4b]">
+                        No timetable workspaces yet
                     </h3>
-                    <p className="text-xs text-[#64748b] leading-relaxed max-w-md mb-6">
-                        ATLAS isolates each semester into a dedicated workspace containing its course allocations, teacher schedules, room assignments, and generated timetables.
+                    <p className="mb-6 max-w-md text-xs leading-relaxed text-[#71817d]">
+                        Create a workspace for an academic year, then add one workbook with the courses and schedules for every year level.
                     </p>
-                    <button
+                    <motion.button
                         onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#1e1b4b] px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-[#3730a3] hover:shadow-md"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Create Your First Semester</span>
-                    </button>
+                        <span>Create first workspace</span>
+                    </motion.button>
                 </div>
             ) : filtered.length === 0 ? (
                 /* Filter or search yielded no results */
@@ -367,21 +400,24 @@ export default function SemesterDashboard({ onEnterSemester }) {
                         <Search className="w-5 h-5" />
                     </div>
                     <h4 className="text-sm font-extrabold text-[#0f172a] mb-1">
-                        No Matching Semesters
+                        No matching workspaces
                     </h4>
                     <p className="text-xs text-[#64748b] mb-4">
-                        {searchQuery ? `No results for "${searchQuery}".` : `No ${filter} semesters available.`}
+                        {searchQuery ? `No results for "${searchQuery}".` : `No ${filter} workspaces available.`}
                     </p>
-                    <button
+                    <motion.button
                         onClick={() => { setFilter("all"); setSearchQuery(""); }}
-                        className="px-4 py-2 bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f766e] hover:bg-[#ebf4f2] rounded-xl transition-all cursor-pointer"
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="px-4 py-2 bg-white border border-[#b8ccc8] text-xs font-bold text-[#3730a3] hover:bg-[#ebf4f2] rounded-xl transition-all cursor-pointer"
                     >
                         Clear Filters
-                    </button>
+                    </motion.button>
                 </div>
             ) : (
-                /* Clean Grid of Actual Semesters */
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                /* Timetable workspace cards */
+                <motion.div layout className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                    <AnimatePresence mode="popLayout">
                     {filtered.map((sem) => (
                         <SemesterCard
                             key={sem.id}
@@ -391,10 +427,11 @@ export default function SemesterDashboard({ onEnterSemester }) {
                             onStatusChange={handleStatusChange}
                         />
                     ))}
-                </div>
+                    </AnimatePresence>
+                </motion.div>
             )}
 
-            {/* Create Semester Modal */}
+            {/* Create Workspace Modal */}
             {showModal && (
                 <CreateSemesterModal
                     onClose={() => setShowModal(false)}

@@ -2,13 +2,32 @@
 
 import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { 
-    Sparkles, Cpu, ShieldCheck, Zap, Layers, ArrowRight, 
-    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, 
-    Award, BookOpen, Beaker, XCircle, X, ChevronRight, Terminal, 
+    Sparkles, Cpu, ShieldCheck, Zap, Layers, ArrowRight, Download,
+    CheckCircle2, Users, FileSpreadsheet, BarChart3, Database, Code, Calendar, Building2, Search,
+    BookOpen, Beaker, X, ChevronRight,
     Activity, Clock, Sliders, Check
 } from "lucide-react";
 import ShimmerButton from "./ui/ShimmerButton";
+
+const V67_RELEASE_NOTES = [
+    { icon: Layers, title: "Workspace navigation and department context", detail: "Added clear view switching, semester context, stage navigation, and department tabs so users can move through college-wide workflows without losing their place." },
+    { icon: FileSpreadsheet, title: "Workbook setup and department progress", detail: "Added department overview cards, configuration and review progress, and clearer workbook validation and generation feedback." },
+    { icon: Activity, title: "Schedule review workbench", detail: "Added conflict and unallocated-session review, schedule comparisons, resource balance, and validated manual session moves." },
+    { icon: Download, title: "Flexible exports", detail: "Added department-wise XLSX downloads, worksheet selection, custom filenames, and print-ready PDF output through the browser print dialog." },
+    { icon: Cpu, title: "Responsive layouts and custom 404", detail: "Improved narrow-screen editing controls and touch scrolling for wide tables, and added a branded not-found page with a route back to ATLAS." },
+    { icon: Search, title: "Workspace dashboard refinements", detail: "Improved workspace search, status filters, lifecycle actions, and responsive cards for semester management." },
+];
+
+const V65_RELEASE_NOTES = [
+    { icon: Database, title: "Multi-department workbook parser", detail: "Recognizes department-scoped workbook sheets, parses their course loads and scheduling inputs, and validates workbook structure before generation." },
+    { icon: Cpu, title: "Unified college-wide generation", detail: "Coordinates department schedules through shared college occupancy so faculty, rooms, labs, and tutorial spaces are considered across the institution." },
+    { icon: Users, title: "Canonical faculty registry", detail: "Resolves shared faculty identities across departments and disambiguates duplicate initials for consistent scheduling and reports." },
+    { icon: Building2, title: "Department-aware resource tracking", detail: "Tracks department ownership and current scheduling context while maintaining college-wide availability for shared resources." },
+    { icon: BarChart3, title: "Master and department reports", detail: "Produces combined timetables with per-department allocation results, diagnostics, workload and resource summaries, and validation results." },
+    { icon: Clock, title: "Persistent college workspaces", detail: "Stores department configuration, generation results, review status, schedule comparison snapshots, and audit events in semester workspaces." },
+];
 
 /* ── Scroll-reveal hook for subtle micro-transitions ──────────────── */
 function useRevealOnScroll() {
@@ -48,8 +67,9 @@ function RevealSection({ children, className = "", delay = 0, id }) {
 
 export default function HomePage({ onLaunchStudio }) {
     const [showChangelog, setShowChangelog] = useState(false);
-    const [changelogVersion, setChangelogVersion] = useState("all"); // 'all' | 'v5.5' | 'v4.5' | 'v4.4'
+    const [changelogVersion, setChangelogVersion] = useState("all"); // release filter
     const [previewTab, setPreviewTab] = useState("division"); // 'division' | 'faculty' | 'lab'
+    const reduceMotion = useReducedMotion();
     const mounted = useSyncExternalStore(
         () => () => {},
         () => true,
@@ -71,205 +91,142 @@ export default function HomePage({ onLaunchStudio }) {
     }, [showChangelog]);
 
     return (
-        <div className="relative">
-            {/* Subtle academic grid pattern */}
-            <div className="atlas-grid-bg fixed inset-0 pointer-events-none z-0" aria-hidden="true" />
+        <div className="relative overflow-hidden">
+            <div className="pointer-events-none absolute right-[-14rem] top-8 h-[34rem] w-[34rem] rounded-full border border-[#dce9e3]/70" aria-hidden="true" />
+            <div className="pointer-events-none absolute right-[-10rem] top-24 h-[26rem] w-[26rem] rounded-full border border-[#e3ece7]/80" aria-hidden="true" />
 
-            {/* Ambient soft glow at top center */}
-            <div 
-                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 pointer-events-none z-0"
-                style={{
-                    background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(45, 212, 191, 0.12), transparent 70%)"
-                }}
-                aria-hidden="true"
-            />
-
-            <div className="relative z-10 space-y-24 sm:space-y-32 pb-16 max-w-5xl mx-auto px-2 sm:px-4">
+            <div className="relative z-10 mx-auto max-w-6xl space-y-20 px-4 pb-16 sm:space-y-24 sm:px-6 lg:px-8">
 
                 {/* ═══════════════════════════════════════════════════════
                     1. HERO SECTION — Modern, Minimal & High-End
                 ═══════════════════════════════════════════════════════ */}
-                <section className="text-center pt-10 sm:pt-16 pb-4">
-                    {/* Announcement & Version Pills */}
-                    <div className="flex flex-wrap items-center justify-center gap-2.5 mb-7">
-                        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/90 border border-teal-200/80 text-[#0f766e] text-xs font-bold shadow-2xs backdrop-blur-xs">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>ATLAS Engine v5.5</span>
-                            <span className="text-[#94a3b8] font-normal">|</span>
-                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
-                                v5.5 NEW
-                            </span>
+                <section className="grid items-center gap-10 pb-2 pt-10 sm:pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
+                    <div className="max-w-xl">
+                        <div className="mb-6 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-2 border-l-2 border-[#4338ca] pl-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#55736a]">Academic scheduling, made workable</span>
+                            <button type="button" onClick={() => setShowChangelog(true)} className="inline-flex items-center gap-1.5 rounded-full border border-[#dce8e2] bg-white/80 px-2.5 py-1 text-[10px] font-bold text-[#55736a] transition-all hover:border-[#9cc5b6] hover:text-[#3730a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40">
+                                <Sparkles className="h-3 w-3" /> What&apos;s new <span className="text-[#3730a3]">v6.7</span>
+                            </button>
+                        </div>
+                        <h1 className="max-w-[650px] text-[2.8rem] font-extrabold leading-[1.02] tracking-[0.01em] text-[#1e1b4b] sm:text-6xl lg:text-[4.25rem]">
+                            One timetable for <span className="text-[#4338ca]">every year.</span>
+                        </h1>
+                        <p className="mt-6 max-w-lg text-sm leading-7 text-[#61736d] sm:text-base">
+                            Bring departments, courses, faculty, and rooms together in one academic-year workspace. ATLAS builds coordinated schedules across all year levels.
+                        </p>
+
+                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                            <ShimmerButton onClick={onLaunchStudio} variant="primary" className="h-12 rounded-xl px-5 text-sm font-bold shadow-[0_8px_22px_-14px_rgba(30,27,75,0.7)] transition-transform hover:-translate-y-0.5">
+                                <span>Open timetable workspaces</span><ArrowRight className="h-4 w-4" />
+                            </ShimmerButton>
+                            <a href="#studio-preview" className="inline-flex h-12 items-center gap-2 rounded-xl px-4 text-xs font-bold text-[#55736a] transition-colors hover:bg-white hover:text-[#3730a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40">
+                                See the workflow <ChevronRight className="h-3.5 w-3.5" />
+                            </a>
                         </div>
 
-                        {/* Interactive Changelog Trigger Pill */}
-                        <button
-                            type="button"
-                            onClick={() => setShowChangelog(true)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1]/80 hover:bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-xs font-bold shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer group hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            <Sparkles className="w-3.5 h-3.5 text-[#0d9488] group-hover:rotate-12 transition-transform duration-200" />
-                            <span>What&apos;s New in v5.5</span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-[#0d9488] text-white text-[9px] font-extrabold tracking-wide">
-                                v5.5 NEW
-                            </span>
-                        </button>
-                    </div>
-
-                    {/* Prominent Logo Emblem */}
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="relative inline-flex items-center justify-center p-2 sm:p-3 rounded-3xl bg-white/90 border border-teal-100 shadow-sm backdrop-blur-sm transition-transform duration-300 hover:scale-[1.02]">
-                            <img 
-                                src="/logo.png" 
-                                alt="ATLAS Timetable Generator" 
-                                className="h-16 sm:h-20 w-auto object-contain mx-auto drop-shadow-xs" 
-                            />
+                        <div className="mt-9 flex flex-wrap gap-x-6 gap-y-2 border-t border-[#dfe9e4] pt-4 text-[10px] font-semibold text-[#71817d]">
+                            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[#4338ca]" /> All year levels in one run</span>
+                            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[#4338ca]" /> Department workspaces</span>
+                            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[#4338ca]" /> Export-ready schedules</span>
                         </div>
                     </div>
 
-                    {/* Refined Modern Headline */}
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#0f172a] tracking-tight leading-[1.12] max-w-3xl mx-auto mb-5">
-                        Next-Generation Academic{" "}
-                        <span className="bg-gradient-to-r from-[#0d9488] via-[#0f766e] to-[#047857] bg-clip-text text-transparent">
-                            Timetable Engine
-                        </span>
-                    </h1>
-
-                    {/* Subtext — concise, readable, high contrast */}
-                    <p className="text-sm sm:text-base text-[#475569] max-w-2xl mx-auto font-normal leading-relaxed mb-8">
-                        Powered by <strong className="font-bold text-[#0d9488]">ATLAS Algorithm v5.5</strong> — an adaptive scheduling engine designed for course-aware laboratory allocation, physical campus constraints, college-wide timetable generation, and conflict repair.
-                    </p>
-
-                    {/* Action Group */}
-                    <div className="flex flex-wrap items-center justify-center gap-3.5">
-                        <ShimmerButton
-                            onClick={onLaunchStudio}
-                            variant="primary"
-                            className="py-3 px-7 text-sm font-extrabold shadow-sm hover:shadow-md transition-all group"
-                        >
-                            <span>Start Timetable Generation (v5.5)</span>
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                        </ShimmerButton>
-
-                        <a
-                            href="#atlas-algorithm"
-                            className="inline-flex items-center gap-1.5 px-5 py-3 rounded-full text-xs font-bold text-[#0f766e] bg-white/90 hover:bg-[#ebf4f2] border border-[#b8ccc8]/80 hover:border-[#99f6e4] transition-all duration-200 shadow-2xs"
-                        >
-                            <span>Explore Solver Architecture</span>
-                            <span className="text-[11px] text-[#0d9488]">↓</span>
-                        </a>
-                    </div>
-
-                    {/* Key Technical Proof Points Ribbon */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-12 max-w-4xl mx-auto text-left">
-                        {[
-                            {
-                                label: "100% Conflict-Free",
-                                sub: "Guaranteed zero faculty & room clashes",
-                                icon: ShieldCheck,
-                            },
-                            {
-                                label: "4-Way Practical Stacking",
-                                sub: "Multi-course parallel lab allocation",
-                                icon: Layers,
-                            },
-                            {
-                                label: "4 Synchronized Views",
-                                sub: "Division, Faculty, Location & Batch",
-                                icon: BarChart3,
-                            },
-                            {
-                                label: "Zero Hallucination",
-                                sub: "Strict course invariant preservation",
-                                icon: CheckCircle2,
-                            }
-                        ].map((stat, i) => (
-                            <div 
-                                key={i} 
-                                className="p-3.5 rounded-2xl bg-white/80 border border-[#b8ccc8]/60 shadow-2xs hover:border-[#99f6e4] transition-colors"
-                            >
-                                <div className="flex items-center gap-2 mb-1">
-                                    <stat.icon className="w-4 h-4 text-[#0d9488] shrink-0" />
-                                    <span className="text-xs font-bold text-[#0f172a] leading-tight">
-                                        {stat.label}
-                                    </span>
+                    <motion.div initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.45, ease: "easeOut" }} className="relative mx-auto w-full max-w-[620px]">
+                        <div className="absolute -inset-4 -z-10 rounded-[34px] border border-[#dfe9e4]" />
+                        <div className="overflow-hidden rounded-[24px] border border-[#dce7e2] bg-white shadow-[0_28px_70px_-48px_rgba(20,57,51,0.45)]">
+                            <div className="flex items-center justify-between border-b border-[#e9efec] bg-[#fbfcfb] px-4 py-3 sm:px-5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#eaf5f0] text-[#3730a3]"><Calendar className="h-4 w-4" /></div>
+                                    <div><p className="text-[10px] font-bold text-[#294943]">Academic timetable</p><p className="mt-0.5 text-[9px] text-[#8a9994]">AY 2026–27 · All years</p></div>
                                 </div>
-                                <p className="text-[11px] text-[#64748b] leading-snug pl-6">
-                                    {stat.sub}
-                                </p>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0f8f4] px-2.5 py-1 text-[9px] font-bold text-[#477568]"><span className="h-1.5 w-1.5 rounded-full bg-[#4338ca]" /> Ready to review</span>
                             </div>
-                        ))}
-                    </div>
+                            <div className="p-4 sm:p-5">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <div><p className="text-xs font-extrabold text-[#294943]">Computer Science</p><p className="mt-0.5 text-[9px] text-[#8a9994]">Division · Year 3</p></div>
+                                    <span className="rounded-md border border-[#e6eeea] px-2 py-1 text-[9px] font-semibold text-[#71817d]">Week view</span>
+                                </div>
+                                <div className="overflow-hidden rounded-xl border border-[#e6ece9]">
+                                    <div className="grid grid-cols-[54px_repeat(5,minmax(0,1fr))] border-b border-[#e6ece9] bg-[#f7f9f8] text-center text-[8px] font-bold text-[#84938e]">
+                                        <span className="py-2 text-left pl-2">TIME</span>{["MON", "TUE", "WED", "THU", "FRI"].map((day) => <span key={day} className="py-2">{day}</span>)}
+                                    </div>
+                                    {[
+                                        { time: "09:00", cells: ["DSA", "OS", "DBMS", "CN", "DSA"] },
+                                        { time: "10:00", cells: ["DBMS", "CN", "OS", "DSA", "—"] },
+                                        { time: "11:15", cells: ["LAB", "—", "TUT", "LAB", "OS"] },
+                                        { time: "12:15", cells: ["—", "DSA", "CN", "—", "DBMS"] },
+                                    ].map((row, rowIndex) => (
+                                        <div key={row.time} className="grid grid-cols-[54px_repeat(5,minmax(0,1fr))] border-b border-[#edf1ef] last:border-0">
+                                            <span className="flex items-center px-2 text-[8px] font-semibold text-[#94a29d]">{row.time}</span>
+                                            {row.cells.map((course, columnIndex) => (
+                                                <div key={`${row.time}-${columnIndex}`} className="border-l border-[#edf1ef] p-1">
+                                                    <div className={`flex h-8 items-center justify-center rounded-md text-[8px] font-bold ${course === "—" ? "text-[#c0cbc6]" : course === "LAB" ? "bg-[#e3f2eb] text-[#3730a3]" : course === "TUT" ? "bg-[#f1ecf8] text-[#715c91]" : rowIndex % 2 === 0 ? "bg-[#edf4f7] text-[#476476]" : "bg-[#f4f2ea] text-[#76684d]"}`}>{course}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#edf1ef] pt-3">
+                                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-[#6e8079]"><span className="h-1.5 w-1.5 rounded-full bg-[#4338ca]" /> Department schedule</div>
+                                    <div className="flex -space-x-1.5" aria-label="Includes multiple departments">
+                                        {["CS", "EL", "+"].map((dept, index) => <span key={dept} className={`grid h-6 w-6 place-items-center rounded-full border-2 border-white text-[7px] font-extrabold ${index === 0 ? "bg-[#dcefe5] text-[#386b55]" : index === 1 ? "bg-[#e9e4f2] text-[#655686]" : "bg-[#f0f3f1] text-[#66756f]"}`}>{dept}</span>)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
                 </section>
 
                 {/* ═══════════════════════════════════════════════════════
                     2. PRODUCT PREVIEW — Interactive Studio Showcase
                 ═══════════════════════════════════════════════════════ */}
-                <RevealSection className="px-1">
-                    <div className="relative rounded-3xl border border-[#b8ccc8]/80 bg-white shadow-xl shadow-teal-950/5 overflow-hidden transition-all duration-300">
-                        {/* Chrome Header Bar */}
-                        <div className="flex items-center justify-between px-5 py-3 bg-[#f8fafb] border-b border-[#e2e8f0]">
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded-full bg-[#fca5a5]" />
-                                    <div className="w-3 h-3 rounded-full bg-[#fde68a]" />
-                                    <div className="w-3 h-3 rounded-full bg-[#86efac]" />
-                                </div>
-                                <span className="text-[11px] font-semibold text-[#94a3b8] ml-2 hidden sm:inline">
-                                    ATLAS Scheduler Studio Workspace
-                                </span>
+                <RevealSection id="studio-preview" className="scroll-mt-28 px-1">
+                    <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div><p className="mb-2 text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#0d8b7e]">A closer look</p><h2 className="text-2xl font-extrabold tracking-[-0.045em] text-[#1e1b4b] sm:text-3xl">One schedule, from every angle.</h2></div>
+                        <p className="max-w-md text-xs leading-5 text-[#71817d]">Review department timetables alongside faculty loads and room use, then export the complete workbook.</p>
+                    </div>
+                    <div className="relative overflow-hidden rounded-[26px] border border-[#dce7e2] bg-white shadow-[0_24px_64px_-48px_rgba(20,57,51,0.45)] transition-all duration-300">
+                        {/* Preview context */}
+                        <div className="flex items-center justify-between gap-3 border-b border-[#e8efeb] bg-[#fbfcfb] px-4 py-3 sm:px-6">
+                            <div className="flex items-center gap-3">
+                                <div className="grid h-9 w-9 place-items-center rounded-xl border border-[#dcebe4] bg-[#eef7f2] text-[#3730a3]"><Calendar className="h-4 w-4" /></div>
+                                <div><p className="text-xs font-extrabold text-[#294943]">Timetable studio</p><p className="mt-0.5 text-[10px] text-[#899791]">Example schedule · Computer Science</p></div>
                             </div>
-
-                            {/* Center URL capsule */}
-                            <div className="flex items-center gap-1.5 px-4 py-1 rounded-xl bg-white border border-[#e2e8f0] text-[11px] font-mono text-[#64748b] shadow-2xs max-w-xs truncate">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span>atlas-engine.app/studio/AY-2025-26</span>
-                            </div>
-
-                            {/* Status badge */}
-                            <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" />
-                                    <span>Optimal Solution (Penalty: 0)</span>
-                                </span>
-                            </div>
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e0e9e4] bg-white px-2.5 py-1.5 text-[9px] font-semibold text-[#667a72]"><span className="h-1.5 w-1.5 rounded-full bg-[#4338ca]" /> Sample data</span>
                         </div>
 
                         {/* Interactive Tab Switcher inside the preview */}
-                        <div className="px-6 pt-4 pb-2 border-b border-[#f1f5f9] flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#f0f4f3] border border-[#e2e8f0]">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf1ef] px-4 pb-3 pt-4 sm:px-6">
+                            <div className="flex items-center gap-1 overflow-x-auto rounded-xl border border-[#e5ece9] bg-[#f5f8f6] p-1">
                                 {[
-                                    { id: "division", label: "Division View (CS-A)" },
-                                    { id: "faculty", label: "Faculty Load (Prof. Sharma)" },
-                                    { id: "lab", label: "Lab Allocation (Lab-104)" },
+                                    { id: "division", label: "Division" },
+                                    { id: "faculty", label: "Faculty" },
+                                    { id: "lab", label: "Rooms & labs" },
                                 ].map((tab) => (
-                                    <button
+                                    <motion.button
                                         key={tab.id}
                                         type="button"
                                         onClick={() => setPreviewTab(tab.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                            previewTab === tab.id
-                                                ? "bg-white text-[#0f766e] shadow-2xs border border-[#e2e8f0]"
-                                                : "text-[#64748b] hover:text-[#0f172a]"
+                                        whileTap={{ scale: 0.97 }}
+                                        className={`relative shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                                            previewTab === tab.id ? "text-[#3730a3]" : "text-[#71817d] hover:text-[#294943]"
                                         }`}
                                     >
-                                        {tab.label}
-                                    </button>
+                                        {previewTab === tab.id && <motion.span layoutId="home-preview-tab" className="absolute inset-0 rounded-lg border border-white bg-white shadow-[0_2px_6px_rgba(28,66,57,0.08)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                                        <span className="relative">{tab.label}</span>
+                                    </motion.button>
                                 ))}
                             </div>
 
-                            <div className="flex items-center gap-2 text-[11px] text-[#64748b]">
-                                <span className="font-semibold text-[#0f172a]">Active Constraints:</span>
-                                <span className="px-2 py-0.5 rounded-md bg-[#ccfbf1] text-[#0f766e] font-extrabold text-[10px]">
-                                    CASC Auto-Repair
-                                </span>
-                                <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-extrabold text-[10px] border border-purple-200">
-                                    Elective Sync
-                                </span>
+                            <div className="flex items-center gap-2 text-[10px] font-semibold text-[#73847d]">
+                                <span className="hidden sm:inline">Coordinated with</span>
+                                <span className="rounded-lg bg-[#eef7f2] px-2 py-1 text-[#4e7865]">Faculty availability</span>
+                                <span className="rounded-lg bg-[#f2f0f7] px-2 py-1 text-[#756b92]">Room capacity</span>
                             </div>
                         </div>
 
                         {/* Interactive Timetable Grid Display */}
-                        <div className="p-6 space-y-4">
+                        <div className="space-y-4 p-4 sm:p-6">
                             <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0]">
                                 <table className="w-full text-xs">
                                     <thead>
@@ -313,8 +270,8 @@ export default function HomePage({ onLaunchStudio }) {
                                                         </div>
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#0d9488]/20 text-[#0f766e] text-center">
-                                                            <span className="font-bold">Parallel Labs</span> <span className="text-[10px] text-[#0d9488]">• S1: DSA | S2: COA</span>
+                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#4338ca]/20 text-[#3730a3] text-center">
+                                                            <span className="font-bold">Parallel Labs</span> <span className="text-[10px] text-[#4338ca]">• S1: DSA | S2: COA</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -343,8 +300,8 @@ export default function HomePage({ onLaunchStudio }) {
                                                         </div>
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#0d9488]/20 text-[#0f766e] text-center">
-                                                            <span className="font-bold">Parallel Labs</span> <span className="text-[10px] text-[#0d9488]">• S3: DBMS | S4: OS</span>
+                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#4338ca]/20 text-[#3730a3] text-center">
+                                                            <span className="font-bold">Parallel Labs</span> <span className="text-[10px] text-[#4338ca]">• S3: DBMS | S4: OS</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -375,8 +332,8 @@ export default function HomePage({ onLaunchStudio }) {
                                                         Faculty Office Hours
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#0d9488]/20 text-[#0f766e] text-center">
-                                                            <span className="font-bold">DSA Lab Batch S1</span> <span className="text-[10px] text-[#0d9488]">• Lab-104</span>
+                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#4338ca]/20 text-[#3730a3] text-center">
+                                                            <span className="font-bold">DSA Lab Batch S1</span> <span className="text-[10px] text-[#4338ca]">• Lab-104</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -427,8 +384,8 @@ export default function HomePage({ onLaunchStudio }) {
                                                         Lab Prep
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#0d9488]/20 text-[#0f766e] text-center">
-                                                            <span className="font-bold">CS-A DSA Lab (S1)</span> <span className="text-[10px] text-[#0d9488]">• Prof. Sharma • 28/30 Seats</span>
+                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#4338ca]/20 text-[#3730a3] text-center">
+                                                            <span className="font-bold">CS-A DSA Lab (S1)</span> <span className="text-[10px] text-[#4338ca]">• Prof. Sharma • 28/30 Seats</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -449,8 +406,8 @@ export default function HomePage({ onLaunchStudio }) {
                                                         Lunch Break
                                                     </td>
                                                     <td className="p-2 hidden sm:table-cell">
-                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#0d9488]/20 text-[#0f766e] text-center">
-                                                            <span className="font-bold">CS-B DSA Lab (S3)</span> <span className="text-[10px] text-[#0d9488]">• Prof. Mane • 30/30 Seats</span>
+                                                        <div className="px-2.5 py-1.5 rounded-lg bg-[#e6f4f1] border border-[#4338ca]/20 text-[#3730a3] text-center">
+                                                            <span className="font-bold">CS-B DSA Lab (S3)</span> <span className="text-[10px] text-[#4338ca]">• Prof. Mane • 30/30 Seats</span>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -472,7 +429,7 @@ export default function HomePage({ onLaunchStudio }) {
                                         <span>Tutorial</span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="w-2.5 h-2.5 rounded-sm bg-[#0d9488]" />
+                                        <span className="w-2.5 h-2.5 rounded-sm bg-[#4338ca]" />
                                         <span>Practical Lab</span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
@@ -496,215 +453,100 @@ export default function HomePage({ onLaunchStudio }) {
                     3. PROPRIETARY ALGORITHM: 4-LAYER SOLVER PIPELINE
                 ═══════════════════════════════════════════════════════ */}
                 <RevealSection id="atlas-algorithm" className="space-y-8 scroll-mt-24">
-                    <div className="text-center space-y-2.5">
-                        <span className="px-3.5 py-1 text-[10px] font-extrabold uppercase rounded-full bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] inline-block tracking-wider">
-                            Constraint Solver Architecture
-                        </span>
-                        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
-                            The ATLAS Algorithm Core
-                        </h2>
-                        <p className="text-xs sm:text-sm text-[#64748b] font-medium max-w-xl mx-auto">
-                            Adaptive Timetable and Learning Allocation System with Multi-Phase Optimization
-                        </p>
+                    <div className="mx-auto max-w-2xl space-y-2.5 text-center">
+                        <span className="inline-block border-l-2 border-[#4338ca] pl-2.5 text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#55736a]">How scheduling works</span>
+                        <h2 className="text-2xl font-extrabold tracking-[-0.045em] text-[#1e1b4b] sm:text-3xl">Rules first. A workable schedule next.</h2>
+                        <p className="text-xs leading-6 text-[#71817d] sm:text-sm">ATLAS builds around fixed sessions, course requirements, faculty availability, and campus resources.</p>
                     </div>
 
-                    {/* Academic Research Paper Specification Box */}
-                    <div className="p-5 rounded-2xl bg-white border border-[#b8ccc8]/70 shadow-2xs text-xs space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 font-bold text-[#0f766e]">
-                                <BookOpen className="w-4 h-4 text-[#0d9488]" />
-                                <span>Academic Research Specification & Solver Formulation</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-[#94a3b8] hidden sm:inline">
-                                Ref: ATLAS-V55-ALGO
-                            </span>
-                        </div>
-                        <p className="italic text-[#475569] leading-relaxed">
-                            &ldquo;We formulate university scheduling as a 4-layer multi-constraint optimization problem. By combining topological hard anchor reservation, parallel hyper-graph batch packing, dynamic entropy-guided swapping, and evolutionary fitness minimization, ATLAS deterministically converges to a zero-penalty schedule without combinatorial explosion.&rdquo;
-                        </p>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-[#dfe9e4] bg-white px-5 py-4 sm:flex-row sm:items-center sm:gap-4">
+                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eef7f2] text-[#3730a3]"><BookOpen className="h-4 w-4" /></div>
+                        <p className="text-xs leading-6 text-[#61736d]">Fixed classes and breaks are placed first. Practical batches are grouped, remaining sessions are assigned around conflicts, and the result is checked before you review it.</p>
                     </div>
 
                     {/* 4-Layer Connected Pipeline Architecture */}
                     <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#b8ccc8]/60 shadow-sm space-y-7">
-                        <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-3">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-[#94a3b8]">
-                                Sequential Constraint Pipeline
-                            </h3>
-                            <span className="text-[11px] font-extrabold text-[#0d9488]">
-                                4 Deterministic Passes
-                            </span>
+                        <div className="flex items-center justify-between border-b border-[#e8efeb] pb-3">
+                            <h3 className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#71817d]">Scheduling stages</h3>
+                            <span className="text-[10px] font-semibold text-[#8a9994]">01 — 04</span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {/* Layer 1: THARM */}
-                            <div className="p-5 rounded-2xl bg-[#f8fdfb] border border-[#d2e8e4] space-y-3 hover-lift">
+                            <div className="p-5 rounded-2xl bg-[#fbfcfb] border border-[#e3ebe7] space-y-3 hover-lift">
                                 <div className="flex items-center justify-between">
-                                    <span className="px-2 py-0.5 text-[9px] font-extrabold rounded-md bg-[#0d9488] text-white">
-                                        LAYER 01
-                                    </span>
-                                    <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md border border-[#99f6e4]">
-                                        THARM
-                                    </span>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0d766e]">01 · Foundations</span>
                                 </div>
                                 <h4 className="text-sm font-extrabold text-[#0f172a] leading-snug">
-                                    Topological Hard Anchor Reservation
+                                    Fixed sessions first
                                 </h4>
                                 <p className="text-[11px] text-[#64748b] leading-relaxed">
-                                    Locks immutable institutional courses (MILFL, Aptitude) into a 3D matrix (<span className="font-mono text-[10px]">Class × Day × Slot</span>) with break-aware slot masking.
+                                    Required classes, fixed sessions, and break periods are held in place before the rest of the schedule is built.
                                 </p>
                             </div>
 
                             {/* Layer 2: PHGBP */}
-                            <div className="p-5 rounded-2xl bg-[#f8fdfb] border border-[#d2e8e4] space-y-3 hover-lift">
+                            <div className="p-5 rounded-2xl bg-[#fbfcfb] border border-[#e3ebe7] space-y-3 hover-lift">
                                 <div className="flex items-center justify-between">
-                                    <span className="px-2 py-0.5 text-[9px] font-extrabold rounded-md bg-[#0d9488] text-white">
-                                        LAYER 02
-                                    </span>
-                                    <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md border border-[#99f6e4]">
-                                        PHGBP
-                                    </span>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0d766e]">02 · Practicals</span>
                                 </div>
                                 <h4 className="text-sm font-extrabold text-[#0f172a] leading-snug">
-                                    Parallel Hyper-Graph Batch Packing
+                                    Group practical sessions
                                 </h4>
                                 <p className="text-[11px] text-[#64748b] leading-relaxed">
-                                    Stacks lab batches (S1-S8) across different courses in the same 2-hour window using priority stacking (4 → 3 → 2 → 1) to maximize lab utilization.
+                                    Related course batches can share a practical window, helping make better use of available labs and instructors.
                                 </p>
                             </div>
 
                             {/* Layer 3: DEGES */}
-                            <div className="p-5 rounded-2xl bg-[#f8fdfb] border border-[#d2e8e4] space-y-3 hover-lift">
+                            <div className="p-5 rounded-2xl bg-[#fbfcfb] border border-[#e3ebe7] space-y-3 hover-lift">
                                 <div className="flex items-center justify-between">
-                                    <span className="px-2 py-0.5 text-[9px] font-extrabold rounded-md bg-[#0d9488] text-white">
-                                        LAYER 03
-                                    </span>
-                                    <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md border border-[#99f6e4]">
-                                        DEGES
-                                    </span>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0d766e]">03 · Coordination</span>
                                 </div>
                                 <h4 className="text-sm font-extrabold text-[#0f172a] leading-snug">
-                                    Dynamic Entropy-Guided Swapping
+                                    Work around conflicts
                                 </h4>
                                 <p className="text-[11px] text-[#64748b] leading-relaxed">
-                                    Heals bottlenecked sessions by evaluating slot tightness entropy and executing directed multi-hop swaps without breaking invariant bindings.
+                                    The solver checks course, faculty, and room availability to find a place for sessions that compete for the same time.
                                 </p>
                             </div>
 
                             {/* Layer 4: MTEFM */}
-                            <div className="p-5 rounded-2xl bg-[#f8fdfb] border border-[#d2e8e4] space-y-3 hover-lift">
+                            <div className="p-5 rounded-2xl bg-[#fbfcfb] border border-[#e3ebe7] space-y-3 hover-lift">
                                 <div className="flex items-center justify-between">
-                                    <span className="px-2 py-0.5 text-[9px] font-extrabold rounded-md bg-[#0d9488] text-white">
-                                        LAYER 04
-                                    </span>
-                                    <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md border border-[#99f6e4]">
-                                        MTEFM
-                                    </span>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0d766e]">04 · Review</span>
                                 </div>
                                 <h4 className="text-sm font-extrabold text-[#0f172a] leading-snug">
-                                    Evolutionary Fitness Minimizer
+                                    Validate the result
                                 </h4>
                                 <p className="text-[11px] text-[#64748b] leading-relaxed">
-                                    Iterates through fine-grained schedule variations until penalty reaches 0, mathematically ensuring zero faculty clashes and zero room double-bookings.
+                                    ATLAS checks the generated timetable for clashes and unassigned sessions, then provides reports for review and export.
                                 </p>
                             </div>
                         </div>
 
-                        {/* Mathematical Penalty Terminal */}
-                        <div className="p-5 rounded-2xl bg-[#0f172a] text-white space-y-2.5 text-center shadow-md">
-                            <div className="flex items-center justify-center gap-2">
-                                <Terminal className="w-3.5 h-3.5 text-[#2dd4bf]" />
-                                <span className="text-[10px] font-mono uppercase tracking-widest text-[#99f6e4]">
-                                    Fitness Objective Function
-                                </span>
-                            </div>
-                            <div className="font-mono text-xs sm:text-sm text-[#ccfbf1] font-bold overflow-x-auto py-1 tracking-tight">
-                                Penalty = (10,000 × FacultyClashes) + (1,000 × MissingSessions) + (500 × RoomClashes) + (200 × BreakViolations) → 0
-                            </div>
-                            <p className="text-[11px] text-[#94a3b8] max-w-xl mx-auto font-normal">
-                                Target: Penalty = 0. Convergence guarantees 100% conflict-free allocation without relaxing hard institutional constraints.
-                            </p>
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e3ebe7] bg-[#f8faf9] px-4 py-3">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#71817d]">Every pass respects the same constraints</span>
+                            <span className="flex flex-wrap gap-2 text-[9px] font-semibold text-[#58716a]"><span>Course load</span><span>·</span><span>Faculty</span><span>·</span><span>Rooms</span><span>·</span><span>Fixed sessions</span></span>
                         </div>
                     </div>
 
-                    {/* Comparative Analysis: Traditional vs ATLAS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Traditional Schedulers */}
-                        <div className="p-6 rounded-3xl bg-white border border-rose-200/80 shadow-2xs space-y-4 hover-lift">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
-                                    <XCircle className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-extrabold text-[#0f172a]">
-                                        Traditional Schedulers
-                                    </h3>
-                                    <p className="text-xs text-rose-600/80 font-medium">
-                                        Brute Force & Unconstrained Genetic Heuristics
-                                    </p>
-                                </div>
-                            </div>
-
-                            <ul className="space-y-2.5 text-xs text-[#475569]">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-rose-400 font-bold mt-0.5">•</span>
-                                    <span><strong>Combinatorial Explosion:</strong> Exponential complexity O(N!) causes build freezes or timeouts on full college loads.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-rose-400 font-bold mt-0.5">•</span>
-                                    <span><strong>Non-Deterministic Failures:</strong> Genetic algorithms frequently leave invisible faculty overlaps and missing slots.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-rose-400 font-bold mt-0.5">•</span>
-                                    <span><strong>No Elective Synchronization:</strong> Inability to synchronize common elective lecture slots across distinct divisions.</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* ATLAS Engine */}
-                        <div className="p-6 rounded-3xl bg-white border border-[#0d9488]/40 shadow-sm space-y-4 hover-lift relative overflow-hidden">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
-                                    <Cpu className="w-5 h-5 text-[#0d9488]" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-extrabold text-[#0f172a]">
-                                        ATLAS Algorithm Engine
-                                    </h3>
-                                    <p className="text-xs text-[#0d9488] font-semibold">
-                                        Deterministic Multi-Phase Constraint Solver
-                                    </p>
-                                </div>
-                            </div>
-
-                            <ul className="space-y-2.5 text-xs text-[#334155]">
-                                <li className="flex items-start gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-[#0d9488] shrink-0 mt-0.5" />
-                                    <span><strong>Zero Course Hallucination:</strong> Preserves 100% invariant course-faculty mappings without fabricated names.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-[#0d9488] shrink-0 mt-0.5" />
-                                    <span><strong>Self-Healing CASC Cascade:</strong> Automatically relocates stuck sessions via multi-hop slot relocation.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-[#0d9488] shrink-0 mt-0.5" />
-                                    <span><strong>Unified Single-Pass Pipeline:</strong> Generates Division, Faculty, Location, and Batch schedules simultaneously.</span>
-                                </li>
-                            </ul>
-                        </div>
+                    <div className="grid gap-px overflow-hidden rounded-2xl border border-[#e1e9e5] bg-[#e1e9e5] sm:grid-cols-3">
+                        {[
+                            { title: "Keep campus rules", body: "Fixed classes, faculty, and room limits stay part of the schedule." },
+                            { title: "Coordinate departments", body: "Generate department schedules within one academic-year workspace." },
+                            { title: "Review before export", body: "Check divisions, instructors, rooms, and batches in dedicated views." },
+                        ].map((item) => <div key={item.title} className="bg-white p-4 sm:p-5"><p className="text-xs font-extrabold text-[#315d50]">{item.title}</p><p className="mt-1.5 text-[10px] leading-5 text-[#71817d]">{item.body}</p></div>)}
                     </div>
                 </RevealSection>
 
                 {/* ═══════════════════════════════════════════════════════
                     4. PLATFORM CAPABILITIES — Minimalist Feature Grid
                 ═══════════════════════════════════════════════════════ */}
-                <RevealSection className="space-y-8">
-                    <div className="text-center space-y-2">
-                        <span className="px-3.5 py-1 text-[10px] font-extrabold uppercase rounded-full bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] inline-block tracking-wider">
-                            Engine Capabilities
-                        </span>
-                        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
-                            Engineered for Academic Workloads
-                        </h2>
+                <RevealSection className="space-y-6">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div><span className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#55736a]">The everyday details</span><h2 className="mt-2 text-2xl font-extrabold tracking-[-0.045em] text-[#1e1b4b] sm:text-3xl">Made for real campus constraints.</h2></div>
+                        <p className="max-w-md text-xs leading-5 text-[#71817d]">A single workflow for the information schedulers need to balance across a college.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -742,9 +584,9 @@ export default function HomePage({ onLaunchStudio }) {
                         ].map((feature, i) => (
                             <div 
                                 key={i} 
-                                className="p-5 rounded-2xl bg-white border border-[#b8ccc8]/60 shadow-2xs hover-lift flex flex-col space-y-2.5"
+                                className="group flex flex-col space-y-3 rounded-2xl border border-[#e1e9e5] bg-white p-5 shadow-[0_8px_28px_-24px_rgba(20,57,51,0.32)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c6d9d0] hover:shadow-[0_18px_38px_-28px_rgba(20,57,51,0.35)]"
                             >
-                                <div className="w-9 h-9 rounded-xl bg-[#f0fdf9] border border-[#d2e8e4] text-[#0d9488] flex items-center justify-center">
+                                <div className="grid h-9 w-9 place-items-center rounded-xl border border-[#e0ebe5] bg-[#f4f8f5] text-[#3730a3] transition-colors group-hover:bg-[#e9f4ee]">
                                     <feature.icon className="w-4 h-4" />
                                 </div>
                                 <h4 className="text-sm font-extrabold text-[#0f172a] leading-snug">
@@ -762,111 +604,134 @@ export default function HomePage({ onLaunchStudio }) {
                     5. BOTTOM CTA BANNER — Minimal & Modern
                 ═══════════════════════════════════════════════════════ */}
                 <RevealSection>
-                    <div className="p-8 sm:p-12 rounded-3xl bg-white border border-[#0d9488]/30 text-center space-y-4 shadow-sm relative overflow-hidden">
-                        {/* Soft background radial glow */}
-                        <div 
-                            className="absolute inset-0 pointer-events-none" 
-                            style={{
-                                background: "radial-gradient(ellipse at center, rgba(13,148,136,0.06) 0%, transparent 75%)"
-                            }} 
-                            aria-hidden="true" 
-                        />
-                        <div className="relative z-10 space-y-3">
-                            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
-                                Ready to Generate Academic Timetables with ATLAS?
-                            </h3>
-                            <p className="text-xs sm:text-sm text-[#64748b] max-w-lg mx-auto font-normal leading-relaxed">
-                                Create a semester workspace, load your departmental course data, and let the ATLAS solver resolve all constraints automatically.
-                            </p>
-
-                            <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-                                <ShimmerButton
-                                    onClick={onLaunchStudio}
-                                    variant="primary"
-                                    className="py-3 px-8 text-sm font-extrabold"
-                                >
-                                    <span>Launch Timetable Studio (v5.5)</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </ShimmerButton>
-                            </div>
+                    <div className="flex flex-col gap-6 rounded-[26px] bg-[#1e1b4b] p-6 shadow-[0_22px_52px_-36px_rgba(20,57,51,0.55)] sm:flex-row sm:items-center sm:justify-between sm:p-9">
+                        <div className="max-w-xl">
+                            <p className="mb-2 text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#a9d5c2]">Start with your workbook</p>
+                            <h3 className="text-2xl font-extrabold tracking-[-0.045em] text-white sm:text-3xl">Plan the whole academic year.</h3>
+                            <p className="mt-2 text-xs leading-6 text-white/70 sm:text-sm">Create one workspace, add your course data, and build timetables across every year level.</p>
                         </div>
+                        <ShimmerButton onClick={onLaunchStudio} variant="secondary" className="h-12 shrink-0 px-5 text-sm font-bold">
+                            <span>Open workspaces</span><ArrowRight className="h-4 w-4" />
+                        </ShimmerButton>
                     </div>
                 </RevealSection>
             </div>
 
             {/* ═══════════════════════════════════════════════════════
-                VERSION v4.5 & v4.4 CHANGELOG MODAL (PORTALED TO BODY)
+                    RELEASE HISTORY MODAL (PORTALED TO BODY)
             ═══════════════════════════════════════════════════════ */}
             {showChangelog && mounted && createPortal(
-                <div 
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150"
-                    onClick={() => setShowChangelog(false)}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                    className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#0c2723]/40 p-3 backdrop-blur-md sm:p-6"
+                    onMouseDown={(event) => { if (event.target === event.currentTarget) setShowChangelog(false); }}
+                    role="presentation"
                 >
-                    <div 
-                        className="bg-white rounded-3xl border border-[#b8ccc8] shadow-2xl max-w-2xl w-full p-6 sm:p-7 space-y-5 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[88vh] flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
+                    <motion.section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="changelog-dialog-title"
+                        initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.985 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.99 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+                        className="relative my-auto flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/80 bg-[#fbfcfb] shadow-[0_36px_100px_-38px_rgba(8,38,33,0.55)]"
                     >
                         {/* Modal Header */}
-                        <div className="flex items-start justify-between gap-3 border-b border-[#b8ccc8]/40 pb-4 shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0d9488] shadow-2xs">
-                                    <Sparkles className="w-5 h-5" />
+                        <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-[#e6eeea] bg-white px-5 py-5 sm:px-7 sm:py-6">
+                            <div className="pointer-events-none absolute -right-10 -top-20 h-48 w-48 rounded-full bg-[#e8f5f0] blur-3xl" />
+                            <div className="relative flex min-w-0 items-start gap-3.5">
+                                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[#d4eae0] bg-[#eaf6f1] text-[#3730a3]">
+                                    <Sparkles className="h-5 w-5" />
                                 </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-base font-extrabold text-[#0f172a]">
-                                            ATLAS Engine Release Notes
-                                        </h3>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
-                                            v5.5 NEW
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                                            v4.5 UI
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                            v4.4 SOLVER
-                                        </span>
+                                <div className="min-w-0">
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                        <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#0d8b7e]">Release notes</span>
+                                        <span className="rounded-full border border-[#d5ebe1] bg-[#f0f8f4] px-2 py-0.5 text-[9px] font-extrabold text-[#3730a3]">Latest · v6.7</span>
                                     </div>
-                                    <p className="text-xs text-[#64748b] font-medium">
-                                        Comprehensive changelog for v5.5 (Course-Aware Lab Engine & Location Architecture), v4.5 (UI/UX & Workflow), and v4.4 (Core Engine Solver)
-                                    </p>
+                                    <h3 id="changelog-dialog-title" className="text-lg font-extrabold tracking-[-0.035em] text-[#1e1b4b]">What&apos;s new in ATLAS</h3>
+                                    <p className="mt-1 max-w-2xl text-xs leading-5 text-[#71817d]">Browse engine, workflow, and interface updates by release.</p>
                                 </div>
                             </div>
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={() => setShowChangelog(false)}
-                                className="p-1.5 rounded-xl hover:bg-slate-100 text-[#64748b] hover:text-[#0f172a] transition-colors cursor-pointer"
+                                whileHover={{ rotate: 90, backgroundColor: "#f1f6f3" }}
+                                whileTap={{ scale: 0.92 }}
+                                transition={{ duration: 0.18 }}
+                                className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#81918c] transition-colors hover:text-[#294943] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40"
                                 aria-label="Close changelog"
                             >
-                                <X className="w-5 h-5" />
-                            </button>
+                                <X className="h-4 w-4" />
+                            </motion.button>
                         </div>
 
                         {/* Version Filter Tabs */}
-                        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#f0f4f3] border border-[#e2e8f0] shrink-0">
+                        <div className="mx-5 mt-4 flex shrink-0 items-center gap-1 overflow-x-auto rounded-2xl border border-[#e5ece9] bg-[#f5f8f6] p-1.5 sm:mx-7">
                             {[
                                 { id: "all", label: "All Updates" },
-                                { id: "v5.5", label: "v5.5 • Lab Solver (NEW)" },
+                                { id: "v6.7", label: "v6.7 • UI & UX" },
+                                { id: "v6.5", label: "v6.5 • College Engine" },
+                                { id: "v5.5", label: "v5.5 • Course Labs" },
                                 { id: "v4.5", label: "v4.5 • UI & Workflows" },
                                 { id: "v4.4", label: "v4.4 • Core Solver" },
                             ].map((tab) => (
-                                <button
+                                <motion.button
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setChangelogVersion(tab.id)}
-                                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer text-center ${
-                                        changelogVersion === tab.id
-                                            ? "bg-white text-[#0f766e] shadow-2xs border border-[#e2e8f0]"
-                                            : "text-[#64748b] hover:text-[#0f172a]"
+                                    whileTap={{ scale: 0.97 }}
+                                    className={`relative shrink-0 rounded-xl px-3.5 py-2 text-[11px] font-bold transition-colors duration-200 ${
+                                        changelogVersion === tab.id ? "text-[#3730a3]" : "text-[#7b8b86] hover:text-[#294943]"
                                     }`}
                                 >
-                                    {tab.label}
-                                </button>
+                                    {changelogVersion === tab.id && <motion.span layoutId="changelog-version-active" className="absolute inset-0 rounded-xl border border-white bg-white shadow-[0_2px_8px_rgba(28,66,57,0.08)]" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                                    <span className="relative">{tab.label}</span>
+                                </motion.button>
                             ))}
                         </div>
 
                         {/* Scrollable Changelog Content */}
-                        <div className="space-y-4 overflow-y-auto pr-1.5 text-xs flex-1">
+                        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-xs sm:px-7 sm:py-5">
+                            {(changelogVersion === "all" || changelogVersion === "v6.7") && (
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e2e8f0] pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+                                            <h4 className="text-sm font-extrabold text-[#0f172a]">Version 6.7 — Interface & Workflow Experience</h4>
+                                        </div>
+                                        <span className="rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-800">Oct 2026</span>
+                                    </div>
+                                    {V67_RELEASE_NOTES.map(({ icon: Icon, title, detail }, index) => (
+                                        <div key={title} className="space-y-1 rounded-2xl border border-indigo-200/70 bg-indigo-50/40 p-3.5">
+                                            <div className="flex items-center gap-1.5 font-extrabold text-indigo-950"><Icon className="h-4 w-4 shrink-0 text-indigo-600" />{index + 1}. {title}</div>
+                                            <p className="font-medium leading-relaxed text-[#334155]">{detail}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {(changelogVersion === "all" || changelogVersion === "v6.5") && (
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e2e8f0] pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                            <h4 className="text-sm font-extrabold text-[#0f172a]">Version 6.5 — College-Wide Scheduling Engine</h4>
+                                        </div>
+                                        <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800">Core release</span>
+                                    </div>
+                                    {V65_RELEASE_NOTES.map(({ icon: Icon, title, detail }, index) => (
+                                        <div key={title} className="space-y-1 rounded-2xl border border-emerald-200/70 bg-emerald-50/50 p-3.5">
+                                            <div className="flex items-center gap-1.5 font-extrabold text-emerald-950"><Icon className="h-4 w-4 shrink-0 text-emerald-600" />{index + 1}. {title}</div>
+                                            <p className="font-medium leading-relaxed text-[#334155]">{detail}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             {/* ── SECTION: v5.5 RELEASES (NEW) ── */}
                             {(changelogVersion === "all" || changelogVersion === "v5.5") && (
                                 <div className="space-y-3">
@@ -970,10 +835,10 @@ export default function HomePage({ onLaunchStudio }) {
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
                                         <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                                             <h4 className="font-extrabold text-sm text-[#0f172a]">Version 4.5 — Modern Minimal UI/UX Architecture</h4>
                                         </div>
-                                        <span className="text-[10px] font-bold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-md">Oct 2026</span>
+                                        <span className="text-[10px] font-bold text-[#4338ca] bg-[#eef2ff] px-2 py-0.5 rounded-md">Oct 2026</span>
                                     </div>
 
                                     {/* 4.5 Items */}
@@ -1034,15 +899,15 @@ export default function HomePage({ onLaunchStudio }) {
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
                                         <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-[#0d9488]" />
+                                            <span className="w-2.5 h-2.5 rounded-full bg-[#4338ca]" />
                                             <h4 className="font-extrabold text-sm text-[#0f172a]">Version 4.4 — Core Multi-Course Parallel Algorithm</h4>
                                         </div>
                                         <span className="text-[10px] font-bold text-[#64748b] bg-slate-100 px-2 py-0.5 rounded-md">Architecture</span>
                                     </div>
 
                                     <div className="p-3.5 rounded-2xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                        <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                            <Layers className="w-4 h-4 text-[#0d9488]" />
+                                        <div className="font-extrabold text-[#3730a3] flex items-center gap-1.5">
+                                            <Layers className="w-4 h-4 text-[#4338ca]" />
                                             1. Multi-Course Parallel Practical Stacking (4 → 3 → 2 → 1)
                                         </div>
                                         <p className="text-[#475569] font-medium leading-relaxed">
@@ -1051,8 +916,8 @@ export default function HomePage({ onLaunchStudio }) {
                                     </div>
 
                                     <div className="p-3.5 rounded-2xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                        <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                            <Cpu className="w-4 h-4 text-[#0d9488]" />
+                                        <div className="font-extrabold text-[#3730a3] flex items-center gap-1.5">
+                                            <Cpu className="w-4 h-4 text-[#4338ca]" />
                                             2. College-Wide Master Scheduling Priority & CollegeOccupancy
                                         </div>
                                         <p className="text-[#475569] font-medium leading-relaxed">
@@ -1061,8 +926,8 @@ export default function HomePage({ onLaunchStudio }) {
                                     </div>
 
                                     <div className="p-3.5 rounded-2xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                        <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                            <Sparkles className="w-4 h-4 text-[#0d9488]" />
+                                        <div className="font-extrabold text-[#3730a3] flex items-center gap-1.5">
+                                            <Sparkles className="w-4 h-4 text-[#4338ca]" />
                                             3. Course-Preserving Global Cascade Repair (CASC)
                                         </div>
                                         <p className="text-[#475569] font-medium leading-relaxed">
@@ -1071,8 +936,8 @@ export default function HomePage({ onLaunchStudio }) {
                                     </div>
 
                                     <div className="p-3.5 rounded-2xl bg-[#ebf4f2]/70 border border-[#b8ccc8]/60 space-y-1">
-                                        <div className="font-extrabold text-[#0f766e] flex items-center gap-1.5">
-                                            <BookOpen className="w-4 h-4 text-[#0d9488]" />
+                                        <div className="font-extrabold text-[#3730a3] flex items-center gap-1.5">
+                                            <BookOpen className="w-4 h-4 text-[#4338ca]" />
                                             4. Dynamic Priority Scheduling (DAPS) & Resource Contention (RCAA)
                                         </div>
                                         <p className="text-[#475569] font-medium leading-relaxed">
@@ -1084,20 +949,22 @@ export default function HomePage({ onLaunchStudio }) {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="flex items-center justify-between pt-3 border-t border-[#b8ccc8]/40 shrink-0">
-                            <span className="text-[11px] text-[#94a3b8] font-medium">
-                                Showing: <strong className="text-[#0f766e]">{changelogVersion === "all" ? "v5.5 (NEW), v4.5 & v4.4" : changelogVersion}</strong>
+                        <div className="flex shrink-0 flex-col gap-3 border-t border-[#e7eeeb] bg-white/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+                            <span className="text-[11px] font-medium text-[#879791]">
+                                Showing <strong className="text-[#3730a3]">{changelogVersion === "all" ? "all releases · v6.7, v6.5, v5.5, v4.5 & v4.4" : changelogVersion}</strong>
                             </span>
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={() => setShowChangelog(false)}
-                                className="px-5 py-2.5 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-extrabold text-xs transition-colors cursor-pointer shadow-2xs"
+                                whileHover={{ y: -1 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="inline-flex h-10 items-center justify-center rounded-xl bg-[#1e1b4b] px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#3730a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/50 focus-visible:ring-offset-2"
                             >
-                                Close Changelog
-                            </button>
+                                Done
+                            </motion.button>
                         </div>
-                    </div>
-                </div>,
+                    </motion.section>
+                </motion.div>,
                 document.body
             )}
 

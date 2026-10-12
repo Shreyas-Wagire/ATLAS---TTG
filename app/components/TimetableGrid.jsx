@@ -242,7 +242,7 @@ export default function TimetableGrid({ timetable, timetableObj }) {
                             </span>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto overscroll-x-contain touch-pan-x" tabIndex={0} aria-label="Scrollable weekly timetable">
                             <table className="w-full border-collapse table-fixed min-w-[850px] text-xs">
                                 <thead>
                                     <tr className="bg-[#EBF4F2]/70 text-[#64748B] border-b border-[#D3E6E2]">

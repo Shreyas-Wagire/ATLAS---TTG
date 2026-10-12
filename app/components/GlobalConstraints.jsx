@@ -34,31 +34,31 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
     };
 
     return (
-        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-2xs overflow-hidden">
+        <div className="atlas-settings-card rounded-[22px] bg-white border border-[#e1e9e6] shadow-[0_12px_40px_-32px_rgba(20,57,51,0.3)] overflow-hidden">
             {/* Header */}
-            <div className="px-4 sm:px-6 py-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="px-5 sm:px-6 py-5 bg-white border-b border-[#edf1ef] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
+                    <div className="w-9 h-9 rounded-xl bg-[#edf6f3] border border-[#dcebe6] flex items-center justify-center text-[#3730a3]">
                         <Sliders className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold text-[#0f172a]">
+                        <h3 className="text-sm font-bold tracking-tight text-[#142d2a]">
                             Global Synchronized Constraints
                         </h3>
-                        <p className="text-[11px] text-[#64748b] font-medium">
+                        <p className="text-xs text-[#71817d] mt-0.5">
                             Enforce multi-division synchronized elective slots across departments
                         </p>
                     </div>
                 </div>
-                <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
+                <span className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#f1f7f4] text-[#3e6c5e] border border-[#dcebe3]">
                     {globalConstraints.length} Active Constraints
                 </span>
             </div>
 
             <div className="p-4 sm:p-6 space-y-6">
                 {/* Form Inputs */}
-                <form onSubmit={handleAddConstraint} className="p-4 rounded-xl bg-[#ebf4f2]/60 border border-[#b8ccc8] space-y-4">
-                    <h4 className="text-xs font-extrabold uppercase text-[#0f766e] tracking-wider">
+                <form onSubmit={handleAddConstraint} className="p-5 rounded-2xl bg-[#f7f9f8] border border-[#e7eeeb] space-y-4">
+                    <h4 className="text-xs font-extrabold uppercase text-[#3730a3] tracking-wider">
                         Add New Synchronized Constraint
                     </h4>
 
@@ -72,7 +72,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                                 placeholder="e.g. MINOR-II"
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                             />
                         </div>
                         <div>
@@ -84,7 +84,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                                 placeholder="e.g. Monday, Wednesday"
                                 value={days}
                                 onChange={(e) => setDays(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                             />
                         </div>
                         <div>
@@ -96,7 +96,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                                 placeholder="e.g. 11:30 - 12:30"
                                 value={slotTime}
                                 onChange={(e) => setSlotTime(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                             />
                         </div>
                         <div>
@@ -108,7 +108,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                                 placeholder="e.g. Advanced AI"
                                 value={courseName}
                                 onChange={(e) => setCourseName(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                             />
                         </div>
                     </div>
@@ -116,7 +116,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                     <div className="flex justify-end">
                         <button
                             type="submit"
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4338ca] hover:bg-[#3730a3] text-white text-xs font-extrabold transition-all shadow-xs cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Add Constraint Badge</span>
@@ -126,7 +126,7 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
 
                 {/* Constraint Chip System */}
                 <div>
-                    <h4 className="text-xs font-extrabold uppercase text-[#0f766e] tracking-wider mb-3">
+                    <h4 className="text-xs font-extrabold uppercase text-[#3730a3] tracking-wider mb-3">
                         Active Constraint Badges
                     </h4>
 
@@ -141,29 +141,29 @@ export default function GlobalConstraints({ globalConstraints = [], setGlobalCon
                                 return (
                                     <div
                                         key={index}
-                                        className="p-3.5 rounded-xl bg-white border border-[#b8ccc8] flex flex-wrap items-center justify-between gap-3 hover:border-[#0d9488] transition-all shadow-2xs"
+                                        className="p-3.5 rounded-xl bg-white border border-[#b8ccc8] flex flex-wrap items-center justify-between gap-3 hover:border-[#4338ca] transition-all shadow-2xs"
                                     >
                                         <div className="flex flex-wrap items-center gap-2">
                                             {/* Group Badge */}
-                                            <span className="px-2.5 py-1 rounded-md bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] font-extrabold text-xs">
+                                            <span className="px-2.5 py-1 rounded-md bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe] font-extrabold text-xs">
                                                 {item.groupName}
                                             </span>
 
                                             {/* Days Badge */}
                                             <span className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ebf4f2] text-[#334155] text-xs font-bold">
-                                                <Calendar className="w-3 h-3 text-[#0f766e]" />
+                                                <Calendar className="w-3 h-3 text-[#3730a3]" />
                                                 {daysText}
                                             </span>
 
                                             {/* Time Slot Badge */}
                                             <span className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ebf4f2] text-[#334155] text-xs font-bold">
-                                                <Clock className="w-3 h-3 text-[#0f766e]" />
+                                                <Clock className="w-3 h-3 text-[#3730a3]" />
                                                 {item.slotTime}
                                             </span>
 
                                             {/* Course Badge */}
                                             <span className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ebf4f2] text-[#0f172a] text-xs font-bold">
-                                                <BookOpen className="w-3 h-3 text-[#0d9488]" />
+                                                <BookOpen className="w-3 h-3 text-[#4338ca]" />
                                                 {item.courseName}
                                             </span>
                                         </div>

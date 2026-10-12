@@ -18,7 +18,33 @@ ATLAS uses a custom semantic release taxonomy tailored for academic constraint e
 
 ---
 
-## [v5.5] — 2026-10-10 (Current Release)
+## [v6.7] — 2026-10-12 (Current Release)
+
+### 🎨 UI/UX & Responsive Workflow Updates
+- **Workspace Navigation & Department Context**: Refined the application header with compact view navigation, semester context, workflow stage navigation, and horizontally scrollable department switching.
+- **Multi-Department Setup Experience**: Added department overview cards, per-department configuration and review progress, workbook diagnostics, and clearer import and generation status feedback.
+- **Schedule Review Workbench**: Added a focused review screen for unallocated sessions, conflict summaries, resource balance, schedule comparisons, and guarded manual session moves with validation.
+- **Expanded Export Controls**: Added department-wise XLSX downloads, selectable worksheet exports, editable filenames, and print-ready PDF output through the browser print dialog.
+- **Mobile and Tablet Layout Improvements**: Adjusted session editing controls for narrow screens and enabled contained touch scrolling for timetable, course, and report tables.
+- **Custom Not-Found Page**: Added an ATLAS-branded responsive 404 screen with a direct route back to the workspace.
+- **Workspace Dashboard Polish**: Improved workspace filtering, search, status actions, and responsive dashboard cards for semester management.
+
+---
+
+## [v6.5] — 2026-10-12
+
+### 🚀 Core System & College-Wide Scheduling Updates
+- **Multi-Department Workbook Recognition**: Detects department-scoped sheets, parses each department's load, fixed constraints, synchronization rules, and location data, and reports workbook validation issues before generation.
+- **Unified College Timetable Generation**: Schedules departments against shared college-wide occupancy so common faculty and physical resources are coordinated across department schedules.
+- **Cross-Department Faculty Registry**: Creates canonical faculty identities, identifies shared instructors, and disambiguates duplicate initials for reliable conflict checks and reporting.
+- **Department-Aware Resource Allocation**: Tracks resource ownership and active department context while preserving college-wide availability for classrooms, labs, and tutorial rooms.
+- **Combined and Department-Level Results**: Produces a master timetable alongside per-department allocation results, summaries, diagnostics, and review progress.
+- **College-Wide Validation and Reporting**: Extends conflict, workload, resource, and validation reporting to combined schedules, including shared-faculty and shared-resource collisions.
+- **Semester Persistence for College Workspaces**: Saves multi-department configuration, generation results, review state, schedule comparison snapshots, and audit events with semester workspaces.
+
+---
+
+## [v5.5] — 2026-10-10
 
 ### 🚀 Major Engine & Architecture Additions (v5.0 Core)
 

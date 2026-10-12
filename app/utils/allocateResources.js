@@ -203,25 +203,71 @@ export function allocateResources(timetable, resources = {}) {
         // Track occupied room names per slot (0..5)
         const usedRoomsPerSlot = Array.from({ length: 6 }, () => new Set());
 
-        // Step 1: Pre-scan ALL fixed/pre-assigned locations in timetable for this day
+        // Step 1: Reserve existing locations and repair duplicate mutable
+        // assignments before filling the remaining rooms. Earlier per-dept
+        // allocation passes can leave two cells with the same classroom when
+        // the final college-wide pass begins.
+        const claimExistingRoom = (room, slotIndex, cell, onDuplicate) => {
+            if (!room || room === "TBD" || room === "") return;
+            const norm = String(room).toUpperCase().trim();
+            if (usedRoomsPerSlot[slotIndex].has(norm)) {
+                if (!cell.fixed) onDuplicate?.();
+                return;
+            }
+            usedRoomsPerSlot[slotIndex].add(norm);
+        };
+
+        const existingRoomReservations = [];
         divisionKeys.forEach((key) => {
             const daySlots = timetable[key]?.[day] || [];
             daySlots.forEach((cell, slotIndex) => {
                 if (!cell) return;
 
-                if (cell.location && cell.location !== "TBD") {
-                    usedRoomsPerSlot[slotIndex].add(cell.location.toUpperCase().trim());
+                // Fixed/synchronized span-0 cells still occupy this period's
+                // room and must remain reserved during the final allocation.
+                if (!(cell.type === "PRACTICAL" && cell.batchAllocations?.length)) {
+                    existingRoomReservations.push({
+                        room: cell.location,
+                        slotIndex,
+                        cell,
+                        onDuplicate: () => { cell.location = ""; },
+                    });
                 }
 
-                if (cell.batchAllocations) {
+                if (cell.span !== 0 && cell.batchAllocations) {
                     cell.batchAllocations.forEach((alloc) => {
-                        if (alloc.location && alloc.location !== "TBD") {
-                            usedRoomsPerSlot[slotIndex].add(alloc.location.toUpperCase().trim());
-                        }
+                        const occupiedSlots = cell.type === "PRACTICAL" ? [slotIndex, slotIndex + 1] : [slotIndex];
+                        occupiedSlots.forEach((occupiedSlot) => existingRoomReservations.push({
+                            room: alloc.location,
+                            slotIndex: occupiedSlot,
+                            cell,
+                            onDuplicate: () => {
+                                if (alloc.labAssignedStatus !== "MANUAL") {
+                                    alloc.location = "";
+                                    alloc.labAssignedInitial = "";
+                                    alloc.labAssignedStatus = "";
+                                }
+                            },
+                        }));
+                    });
+                }
+
+                if (cell.type === "PRACTICAL" && cell.span !== 0 && cell.tutorialAllocations) {
+                    cell.tutorialAllocations.forEach((alloc) => {
+                        const occupiedSlot = alloc.labSubSlot ?? slotIndex;
+                        existingRoomReservations.push({
+                            room: alloc.location,
+                            slotIndex: occupiedSlot,
+                            cell,
+                            onDuplicate: () => { if (alloc.resourceType !== "MANUAL") alloc.location = ""; },
+                        });
                     });
                 }
             });
         });
+        existingRoomReservations
+            .sort((a, b) => Number(Boolean(b.cell.fixed)) - Number(Boolean(a.cell.fixed)))
+            .forEach(({ room, slotIndex, cell, onDuplicate }) => claimExistingRoom(room, slotIndex, cell, onDuplicate));
 
         // Helper: Get a guaranteed CONFLICT-FREE real room using multi-pool search & dynamic extension
         // RCAA Enhancement: pools are pre-sorted by weekly usage (least-used first)

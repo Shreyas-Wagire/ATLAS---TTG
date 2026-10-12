@@ -11,8 +11,9 @@ export function validateTimetable(timetable, sessionPool, resources = {}) {
     let practicalRequired = 0, practicalAllocated = 0;
 
     sessionPool.forEach((session) => {
-        const timetableKey = `${session.year}-${session.division}`;
-        if (!timetable || !timetable[timetableKey]) return;
+        const timetableKey = session._deptDivKey || `${session.year}-${session.division}`;
+        const classGrid = timetable[timetableKey] || timetable[`${session.year}-${session.division}`];
+        if (!timetable || !classGrid) return;
 
         if (session.type === "LECTURE") {
             lectureRequired++;

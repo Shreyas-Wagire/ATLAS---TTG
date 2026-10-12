@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CheckCircle2, Cpu, Users, Heart } from 'lucide-react';
+import { ArrowUpRight, Cpu, Users } from 'lucide-react';
 import TeamModal from './TeamModal';
 
 export default function AppFooter() {
@@ -9,44 +9,47 @@ export default function AppFooter() {
 
   return (
     <>
-      <footer className="bg-[#f8fafb] border-t border-[#e2e8f0] py-3 px-6 text-xs text-[#94a3b8] mt-auto">
-        <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Left: System Health & Version */}
-          <div className="flex items-center gap-3 font-medium text-[11px]">
-            <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              All Systems Operational
+      <footer className="relative mt-auto overflow-hidden border-t border-[#e5e7f1] bg-white">
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#a5a0eb] to-transparent" />
+
+        <div className="relative mx-auto grid max-w-[1520px] grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 px-5 py-4 sm:px-8 md:grid-cols-[1fr_auto_1fr] md:gap-8 md:py-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#e2e2f3] bg-[#f5f5ff] text-[#4338ca]">
+              <Cpu className="h-4 w-4" strokeWidth={1.8} />
             </span>
-            <span className="text-[#e2e8f0]">|</span>
-            <span className="flex items-center gap-1.5 font-bold text-[#334155]">
-              <Cpu className="w-3.5 h-3.5 text-[#0d9488]" />
-              ATLAS Engine v5.5 Turbo
-            </span>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-extrabold tracking-[0.04em] text-[#1e1b4b]">ATLAS</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a8da7]">Engine · v6.7</span>
+              </div>
+              <p className="text-[10px] leading-3 text-[#777d96]">Academic schedules, thoughtfully coordinated.</p>
+            </div>
           </div>
 
-          {/* Center: Premium Team Showcase Trigger (Replaced shortcuts) */}
-          <div className="flex items-center">
-            <button
-              onClick={() => setShowTeamModal(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white hover:bg-[#ccfbf1]/50 text-[#0f766e] border border-[#b8ccc8]/80 hover:border-[#0d9488]/40 transition-all duration-200 text-xs font-extrabold shadow-2xs hover:shadow-xs group cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-              title="Meet the Development Team"
-            >
-              <Users className="w-3.5 h-3.5 text-[#0d9488] group-hover:scale-110 transition-transform" />
-              <span>Meet the Development Team</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowTeamModal(true)}
+            className="group inline-flex min-h-8 w-fit items-center gap-2 rounded-lg border border-[#e5e7f1] bg-white px-2.5 text-[11px] font-semibold text-[#343751] transition duration-200 hover:-translate-y-0.5 hover:border-[#c8c5ee] hover:bg-[#fafaff] hover:text-[#3730a3] hover:shadow-[0_5px_14px_rgba(49,46,129,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/30"
+            title="Meet the development team"
+          >
+            <Users className="h-3.5 w-3.5 text-[#655cce] transition-transform duration-200 group-hover:scale-110" strokeWidth={1.8} />
+            Meet the team
+            <ArrowUpRight className="h-3.5 w-3.5 text-[#9294aa] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#4338ca]" />
+          </button>
 
-          {/* Right: Edition & Institutional Label */}
-          <div className="text-[11px] font-medium text-[#94a3b8]">
-            <span>Automatic Timetable Generator System</span>
-            <span className="mx-2 text-[#e2e8f0]">|</span>
-            <span className="font-semibold text-[#64748b]">Enterprise v5.5</span>
+          <div className="col-span-2 flex items-center justify-between gap-4 border-t border-[#ececf4] pt-2.5 md:col-span-1 md:justify-self-end md:border-0 md:pt-0">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                <span className="absolute h-full w-full animate-ping rounded-full bg-[#8bc5a1] opacity-40" />
+                <span className="relative h-1.5 w-1.5 rounded-full bg-[#4f9b6b]" />
+              </span>
+              <span className="text-xs font-semibold text-[#4b755e]">System operational</span>
+            </div>
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#9da2b5]">Timetable studio</span>
           </div>
         </div>
       </footer>
 
-      {/* Development Team Modal */}
       <TeamModal isOpen={showTeamModal} onClose={() => setShowTeamModal(false)} />
     </>
   );

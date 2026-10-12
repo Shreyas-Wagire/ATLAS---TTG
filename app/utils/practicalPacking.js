@@ -659,9 +659,7 @@ export function packPracticals(timetable, sessionPool, collegeOccupancy, options
                 log(fullLog);
 
                 // STEP 5: Commit atomically if stack meets minimum threshold for this pass.
-                // When 4 or more sessions remain unallocated in this division, require a full 4-stack
-                // so partial stacks do not burn the division's daily practical quota and starve remaining batches.
-                const requiredMinStack = unallocatedInDiv.length >= 4 ? 4 : pass.minStack;
+                const requiredMinStack = pass.minStack;
                 if (stackResult.selectedStack && stackResult.selectedStack.length >= requiredMinStack && stackResult.selectedAssignedLabs) {
                     collegeOccupancy.commitPracticalGroup(
                         divKey,

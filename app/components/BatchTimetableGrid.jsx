@@ -23,7 +23,7 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
         const map = {};
         if (!activeTimetable) return map;
         Object.keys(activeTimetable).forEach((divKey) => {
-            const yearPrefix = divKey.split("-")[0] || divKey;
+            const yearPrefix = (divKey.split(":").pop() || divKey).split("-")[0] || divKey;
             if (!map[yearPrefix]) map[yearPrefix] = [];
 
             const divData = activeTimetable[divKey];
@@ -34,6 +34,11 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
                             if (alloc.batch && !map[yearPrefix].includes(alloc.batch)) {
                                 map[yearPrefix].push(alloc.batch);
                             }
+                        });
+                    }
+                    if (session?.tutorialAllocations) {
+                        session.tutorialAllocations.forEach((alloc) => {
+                            if (alloc.batch && !map[yearPrefix].includes(alloc.batch)) map[yearPrefix].push(alloc.batch);
                         });
                     }
                 });
@@ -199,7 +204,7 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
                                 </span>
                             </div>
 
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto overscroll-x-contain touch-pan-x" tabIndex={0} aria-label="Scrollable batch timetable">
                                 <table className="w-full border-collapse table-fixed min-w-[750px] text-xs">
                                     <thead>
                                         <tr className="bg-[#EBF4F2]/70 text-[#64748B] border-b border-[#D3E6E2]">
@@ -221,30 +226,36 @@ export default function BatchTimetableGrid({ timetable, timetableObj }) {
                                                 </td>
 
                                                 {days.map((day) => {
-                                                    let matchedAlloc = null;
-                                                    let matchedSession = null;
+                                                    const matchedAllocations = [];
 
                                                     Object.keys(activeTimetable).forEach((divKey) => {
                                                         const s = activeTimetable[divKey]?.[day]?.[slotIndex];
-                                                        if (s && s.batchAllocations) {
-                                                            const alloc = s.batchAllocations.find((a) => a.batch === batchName);
-                                                            if (alloc) {
-                                                                matchedAlloc = alloc;
-                                                                matchedSession = s;
-                                                            }
-                                                        }
+                                                        if (!s) return;
+                                                        const batchSession = s.batchAllocations?.find((a) => a.batch === batchName);
+                                                        if (batchSession) matchedAllocations.push({ ...batchSession, displayType: s.type });
+                                                        const tutorial = s.type === "PRACTICAL"
+                                                            ? s.tutorialAllocations?.find((a) => a.batch === batchName && (a.labSubSlot ?? slotIndex) === slotIndex)
+                                                            : null;
+                                                        if (tutorial) matchedAllocations.push({ ...tutorial, displayType: "TUTORIAL" });
                                                     });
 
-                                                    const cellStyle = getSessionCellStyle(matchedSession || (matchedAlloc ? { type: "PRACTICAL" } : null));
+                                                    const hasBatchClash = matchedAllocations.length > 1;
+                                                    const cellStyle = hasBatchClash
+                                                        ? "bg-rose-50 text-rose-800"
+                                                        : getSessionCellStyle(matchedAllocations[0] ? { type: matchedAllocations[0].displayType } : null);
 
                                                     return (
                                                         <td
                                                             key={day}
                                                             className={`p-2 border-r border-[#D3E6E2] last:border-r-0 align-middle text-center h-14 w-[18.4%] break-words whitespace-normal ${cellStyle}`}
                                                         >
-                                                            {matchedAlloc ? (
-                                                                <div className="text-[10.5px] font-bold leading-snug text-center">
-                                                                    {highlightText(batchName, activeHighlightQuery)} / {highlightText(matchedAlloc.subject, activeHighlightQuery)} / {highlightText(matchedAlloc.faculty, activeHighlightQuery)} / {highlightText(matchedAlloc.location || "LAB", activeHighlightQuery)}
+                                                            {matchedAllocations.length ? (
+                                                                <div className="space-y-1 text-[10px] font-bold leading-snug text-center">
+                                                                    {hasBatchClash && <span className="block text-[9px] font-extrabold uppercase tracking-wide text-rose-700">Batch overlap</span>}
+                                                                    {matchedAllocations.map((allocation, allocationIndex) => <div key={`${allocation.displayType}-${allocation.subject}-${allocationIndex}`} className={hasBatchClash ? "rounded-md border border-rose-200 bg-white/70 p-1" : ""}>
+                                                                        <span className="mr-1 text-[8px] font-extrabold uppercase opacity-70">{allocation.displayType === "PRACTICAL" ? "Lab" : "Tut"}</span>
+                                                                        {highlightText(batchName, activeHighlightQuery)} / {highlightText(allocation.subjectName || allocation.subject || "Session", activeHighlightQuery)} / {highlightText(allocation.faculty || "—", activeHighlightQuery)} / {highlightText(allocation.location || (allocation.displayType === "PRACTICAL" ? "LAB" : "ROOM"), activeHighlightQuery)}
+                                                                    </div>)}
                                                                 </div>
                                                             ) : (
                                                                 <div className="h-full flex items-center justify-center text-[#D3E6E2] font-mono text-[10px]">

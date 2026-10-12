@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
   display: "swap",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: "variable",
+  axes: ["opsz"],
+  variable: "--font-editorial",
 });
 
 export const metadata: Metadata = {
-  title: "ATLAS Engine v5.5 — Automated Academic Timetable Generator",
-  description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm v5.5 (Course-Aware Lab Allocation, Location Architecture, Multi-Course Practical Stacking, DAPS, CASC). Zero conflict guarantee.",
+  title: "ATLAS Engine v6.7 — Automated Academic Timetable Generator",
+  description: "College-wide academic timetable generation with coordinated department, faculty, and resource scheduling.",
   keywords: [
     "ATLAS Engine",
     "ATLAS Algorithm",
@@ -36,16 +38,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "ATLAS Engine v5.5 — Automated Academic Timetable Generator",
-    description: "Next-generation 2D constraint-driven university timetable engine powered by the proprietary ATLAS Algorithm v5.5. 100% Zero Conflict Guarantee.",
+    title: "ATLAS Engine v6.7 — Automated Academic Timetable Generator",
+    description: "College-wide academic timetable generation with coordinated department, faculty, and resource scheduling.",
     siteName: "ATLAS Timetable System",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ATLAS Engine v5.5",
-    description: "Automated 2D university timetable generator powered by the ATLAS Algorithm v5.5.",
+    title: "ATLAS Engine v6.7",
+    description: "College-wide academic timetable generation with coordinated department, faculty, and resource scheduling.",
   },
 
 };
@@ -56,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.className} antialiased`}>
+    <html lang="en" className={`${bricolageGrotesque.variable} antialiased`} suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="-g570JiBMyW295Vj2vZBaC_0VumdQlx63AjrJPpJFK0" />
       </head>

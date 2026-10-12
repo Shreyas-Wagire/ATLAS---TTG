@@ -90,7 +90,7 @@ export default function GenerationReport({
                     zIndex: 9999,
                     animation: "fadeInUp 0.3s ease-out",
                 }}
-                className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#0d9488] text-white shadow-2xl border border-[#0f766e] max-w-sm"
+                className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#4338ca] text-white shadow-2xl border border-[#3730a3] max-w-sm"
             >
                 <div className="flex-shrink-0 w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
                     <CheckCircle2 className="w-5 h-5 text-white" />
@@ -101,18 +101,18 @@ export default function GenerationReport({
                 </div>
             </div>
         )}
-        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-xs overflow-hidden space-y-6">
+        <div className="rounded-[22px] bg-white border border-[#e1e9e6] shadow-[0_12px_40px_-32px_rgba(20,57,51,0.3)] overflow-hidden space-y-6">
             {/* Header Bar */}
-            <div className="px-4 sm:px-6 pt-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex items-center justify-between flex-wrap gap-3">
+            <div className="px-5 sm:px-6 pt-5 bg-white border-b border-[#edf1ef] flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3 pb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
+                    <div className="w-9 h-9 rounded-xl bg-[#edf6f3] border border-[#dcebe6] flex items-center justify-center text-[#3730a3]">
                         <BarChart3 className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold text-[#0f172a]">
+                        <h3 className="text-sm font-bold tracking-tight text-[#142d2a]">
                             Post-Generation Analytics & Diagnostics Engine
                         </h3>
-                        <p className="text-[11px] text-[#64748b] font-medium">
+                        <p className="text-xs text-[#71817d] mt-0.5">
                             System validation, room occupancy utilization, faculty load & unallocated session tracking
                         </p>
                     </div>
@@ -129,7 +129,7 @@ export default function GenerationReport({
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-t-lg transition-all border-b-2 cursor-pointer ${
                                     isActive
-                                        ? "bg-white text-[#0f766e] border-[#0d9488]"
+                                        ? "bg-white text-[#3730a3] border-[#4338ca]"
                                         : "text-[#64748b] hover:text-[#0f172a] border-transparent hover:bg-white/50"
                                 }`}
                             >
@@ -139,7 +139,7 @@ export default function GenerationReport({
                                     <span className={`px-1.5 py-0.2 text-[10px] rounded font-extrabold ${
                                         tab.id === "unallocated" && allMissingSessions.length > 0
                                             ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                            : "bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]"
+                                            : "bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe]"
                                     }`}>
                                         {tab.badge}
                                     </span>
@@ -158,7 +158,7 @@ export default function GenerationReport({
                         {/* 4 Metric Summary Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Card 1: Total Sessions */}
-                            <div className="p-5 rounded-xl bg-white border border-[#b8ccc8] shadow-2xs space-y-2">
+                            <div className="p-5 rounded-2xl bg-white border border-[#e5ece9] shadow-xs space-y-2">
                                 <div className="text-[11px] font-extrabold uppercase text-[#64748b] tracking-wider">
                                     Total Required Load
                                 </div>
@@ -171,16 +171,16 @@ export default function GenerationReport({
                             </div>
 
                             {/* Card 2: Allocated Rate */}
-                            <div className="p-5 rounded-xl bg-white border border-[#b8ccc8] shadow-2xs space-y-2">
-                                <div className="text-[11px] font-extrabold uppercase text-[#0d9488] tracking-wider">
+                            <div className="p-5 rounded-2xl bg-white border border-[#e5ece9] shadow-xs space-y-2">
+                                <div className="text-[11px] font-extrabold uppercase text-[#4338ca] tracking-wider">
                                     Allocated Sessions
                                 </div>
-                                <div className="text-3xl font-extrabold text-[#0d9488]">
+                                <div className="text-3xl font-extrabold text-[#4338ca]">
                                     {allocatedSessions}
                                 </div>
                                 <div className="w-full h-1.5 rounded-full bg-[#ebf4f2] overflow-hidden">
                                     <div
-                                        className="h-full bg-[#0d9488] transition-all duration-500"
+                                        className="h-full bg-[#4338ca] transition-all duration-500"
                                         style={{ width: `${allocationRate}%` }}
                                     />
                                 </div>
@@ -190,11 +190,11 @@ export default function GenerationReport({
                             </div>
 
                             {/* Card 3: Location Occupancy Rate */}
-                            <div className="p-5 rounded-xl bg-white border border-[#b8ccc8] shadow-2xs space-y-2">
-                                <div className="text-[11px] font-extrabold uppercase text-[#0f766e] tracking-wider">
+                            <div className="p-5 rounded-2xl bg-white border border-[#e5ece9] shadow-xs space-y-2">
+                                <div className="text-[11px] font-extrabold uppercase text-[#3730a3] tracking-wider">
                                     Location Utilization
                                 </div>
-                                <div className="text-3xl font-extrabold text-[#0f766e]">
+                                <div className="text-3xl font-extrabold text-[#3730a3]">
                                     {overallLocationOccupancyRate}%
                                 </div>
                                 <div className="text-[11px] text-[#64748b] font-medium">
@@ -203,7 +203,7 @@ export default function GenerationReport({
                             </div>
 
                             {/* Card 4: Unallocated Sessions */}
-                            <div className="p-5 rounded-xl bg-white border border-[#b8ccc8] shadow-2xs space-y-2">
+                            <div className="p-5 rounded-2xl bg-white border border-[#e5ece9] shadow-xs space-y-2">
                                 <div className="text-[11px] font-extrabold uppercase text-amber-600 tracking-wider">
                                     Unallocated Sessions
                                 </div>
@@ -218,17 +218,17 @@ export default function GenerationReport({
 
                         {/* Audit Verification Banner */}
                         {allMissingSessions.length === 0 && conflictsCount === 0 ? (
-                            <div className="p-4 rounded-xl bg-[#ccfbf1] border border-[#99f6e4] text-[#0f766e] text-xs font-extrabold flex items-center justify-between flex-wrap gap-3">
+                            <div className="p-4 rounded-xl bg-[#eef2ff] border border-[#c7d2fe] text-[#3730a3] text-xs font-extrabold flex items-center justify-between flex-wrap gap-3">
                                 <div className="flex items-center gap-3">
-                                    <ShieldCheck className="w-6 h-6 text-[#0d9488] shrink-0" />
+                                    <ShieldCheck className="w-6 h-6 text-[#4338ca] shrink-0" />
                                     <div>
                                         <div className="font-extrabold text-sm">100% Conflict-Free & Fully Allocated Matrix</div>
-                                        <div className="text-[11px] font-medium text-[#0f766e]/90">
+                                        <div className="text-[11px] font-medium text-[#3730a3]/90">
                                             Zero faculty double-bookings, zero room overlaps, and 100% session placement rate across all divisions.
                                         </div>
                                     </div>
                                 </div>
-                                <span className="px-3 py-1 rounded-full bg-white text-[#0f766e] border border-[#99f6e4] text-xs font-extrabold shadow-2xs">
+                                <span className="px-3 py-1 rounded-full bg-white text-[#3730a3] border border-[#c7d2fe] text-xs font-extrabold shadow-2xs">
                                     Audit Passed ✓
                                 </span>
                             </div>
@@ -256,11 +256,11 @@ export default function GenerationReport({
                         </div>
 
                         {allMissingSessions.length === 0 ? (
-                            <div className="p-6 rounded-xl bg-[#ccfbf1] border border-[#99f6e4] text-center text-[#0f766e] text-xs font-extrabold">
+                            <div className="p-6 rounded-xl bg-[#eef2ff] border border-[#c7d2fe] text-center text-[#3730a3] text-xs font-extrabold">
                                 ✓ Perfect Allocation! Every single lecture, practical, and tutorial session was 100% fitted into the timetable.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto rounded-xl border border-[#b8ccc8]">
+                            <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-xl border border-[#b8ccc8]" tabIndex={0} aria-label="Scrollable validation report table">
                                 <table className="w-full border-collapse min-w-[700px] text-xs">
                                     <thead>
                                         <tr className="bg-[#ebf4f2] text-[#64748b] border-b border-[#b8ccc8]">
@@ -277,7 +277,7 @@ export default function GenerationReport({
                                                 <td className="p-3 font-extrabold text-[#0f172a]">
                                                     {session.year}-{session.division} {session.batch ? `(${session.batch})` : ""}
                                                 </td>
-                                                <td className="p-3 font-bold text-[#0f766e]">
+                                                <td className="p-3 font-bold text-[#3730a3]">
                                                     {session.subject} {session.subjectName ? `— ${session.subjectName}` : ""}
                                                 </td>
                                                 <td className="p-3 text-center">
@@ -314,7 +314,7 @@ export default function GenerationReport({
                                 Faculty Workload & Teaching Hours Distribution
                             </h4>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-[#b8ccc8]">
+                        <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-xl border border-[#b8ccc8]" tabIndex={0} aria-label="Scrollable resource report table">
                             <table className="w-full border-collapse min-w-[650px] text-xs">
                                 <thead>
                                     <tr className="bg-[#ebf4f2] text-[#64748b] border-b border-[#b8ccc8]">
@@ -334,13 +334,13 @@ export default function GenerationReport({
                                                 <td className="p-3 font-extrabold text-[#0f172a]">{facultyName}</td>
                                                 <td className="p-3 text-center text-[#1e40af] font-bold">{data.lectures || 0} hrs</td>
                                                 <td className="p-3 text-center text-[#5b21b6] font-bold">{data.tutorials || 0} hrs</td>
-                                                <td className="p-3 text-center text-[#0f766e] font-bold">{data.practicals || 0} hrs</td>
+                                                <td className="p-3 text-center text-[#3730a3] font-bold">{data.practicals || 0} hrs</td>
                                                 <td className="p-3 text-center font-extrabold text-[#0f172a]">{total} hrs</td>
                                                 <td className="p-3 text-center">
                                                     <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded ${
                                                         total > 18
                                                             ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                                            : "bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]"
+                                                            : "bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe]"
                                                     }`}>
                                                         {total > 18 ? "HEAVY LOAD" : "OPTIMAL"}
                                                     </span>
@@ -369,7 +369,7 @@ export default function GenerationReport({
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-2xl font-extrabold text-[#0f766e]">
+                                    <div className="text-2xl font-extrabold text-[#3730a3]">
                                         {overallLocationOccupancyRate}%
                                     </div>
                                     <div className="text-[11px] font-bold text-[#64748b]">
@@ -380,7 +380,7 @@ export default function GenerationReport({
 
                             <div className="w-full h-3 rounded-full bg-white border border-[#b8ccc8] overflow-hidden">
                                 <div
-                                    className="h-full bg-[#0d9488] rounded-full transition-all duration-500"
+                                    className="h-full bg-[#4338ca] rounded-full transition-all duration-500"
                                     style={{ width: `${overallLocationOccupancyRate}%` }}
                                 />
                             </div>
@@ -410,14 +410,14 @@ export default function GenerationReport({
 
                                         <div className="w-full h-2 rounded-full bg-[#ebf4f2] overflow-hidden">
                                             <div
-                                                className="h-full bg-[#0d9488] rounded-full transition-all duration-500"
+                                                className="h-full bg-[#4338ca] rounded-full transition-all duration-500"
                                                 style={{ width: `${rate}%` }}
                                             />
                                         </div>
 
                                         <div className="flex items-center justify-between text-[11px] font-bold text-[#64748b]">
                                             <span>{allocated} / 30 Slots Used</span>
-                                            <span className="text-[#0f766e]">{freeSlots} Free Slots</span>
+                                            <span className="text-[#3730a3]">{freeSlots} Free Slots</span>
                                         </div>
                                     </div>
                                 );
@@ -430,7 +430,7 @@ export default function GenerationReport({
                 {activeTab === "conflicts" && (
                     <div className="space-y-4">
                         {(!conflictReport?.conflicts || conflictReport.conflicts.length === 0) ? (
-                            <div className="p-6 rounded-xl bg-[#ccfbf1] border border-[#99f6e4] text-center text-[#0f766e] text-xs font-extrabold">
+                            <div className="p-6 rounded-xl bg-[#eef2ff] border border-[#c7d2fe] text-center text-[#3730a3] text-xs font-extrabold">
                                 ✓ Zero Schedule Conflicts Detected! Timetable matrix is 100% error-free and overlap-free.
                             </div>
                         ) : (
@@ -456,9 +456,9 @@ export default function GenerationReport({
                 {/* 6. VALIDATION SCORE TAB */}
                 {activeTab === "score" && (
                     <div className="max-w-md mx-auto py-6 text-center space-y-4">
-                        <div className="w-32 h-32 mx-auto rounded-full bg-[#ccfbf1] border-4 border-[#0d9488] flex flex-col items-center justify-center text-[#0f766e] shadow-md">
+                        <div className="w-32 h-32 mx-auto rounded-full bg-[#eef2ff] border-4 border-[#4338ca] flex flex-col items-center justify-center text-[#3730a3] shadow-md">
                             <span className="text-3xl font-extrabold">{scoreVal}%</span>
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0f766e]">Fitness Score</span>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#3730a3]">Fitness Score</span>
                         </div>
                         <h4 className="text-lg font-extrabold text-[#0f172a]">
                             Final Schedule Validation Score
@@ -484,7 +484,7 @@ export default function GenerationReport({
                             </div>
                             <div className="p-4 rounded-xl bg-white border border-[#b8ccc8] shadow-2xs space-y-1">
                                 <div className="text-[10px] font-extrabold uppercase text-[#64748b] tracking-wider">Conflicts Resolved</div>
-                                <div className="text-2xl font-extrabold text-[#0f766e]">{optimizationReport.resolvedConflicts ?? 0}</div>
+                                <div className="text-2xl font-extrabold text-[#3730a3]">{optimizationReport.resolvedConflicts ?? 0}</div>
                                 <div className="text-[10px] text-[#64748b]">
                                     {optimizationReport.unresolvedConflicts ?? 0} unresolved
                                 </div>
@@ -546,11 +546,11 @@ export default function GenerationReport({
                         {optimizationReport.facultySummary?.length > 0 && (
                             <div className="space-y-2">
                                 <div className="text-xs font-extrabold text-[#0f172a] flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5 text-[#0d9488]" />
+                                    <Activity className="w-3.5 h-3.5 text-[#4338ca]" />
                                     Faculty Weekly Occupancy Summary
                                 </div>
                                 <div className="rounded-xl border border-[#b8ccc8] overflow-hidden">
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto overscroll-x-contain touch-pan-x" tabIndex={0} aria-label="Scrollable analytics table">
                                         <table className="w-full text-[10.5px]">
                                             <thead className="bg-[#EBF4F2] border-b border-[#D3E6E2]">
                                                 <tr>

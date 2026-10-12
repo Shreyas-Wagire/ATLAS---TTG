@@ -1,297 +1,193 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { X, BookOpen, Calendar, Hash, Building2, Sparkles, AlertTriangle, ArrowRight, ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { X, CalendarDays, Building2, Sparkles, AlertCircle, ArrowRight, ChevronDown, FileSpreadsheet } from "lucide-react";
 
-const SEMESTER_OPTIONS = [
-    { num: 1, roman: "I", term: "Odd Sem" },
-    { num: 2, roman: "II", term: "Even Sem" },
-    { num: 3, roman: "III", term: "Odd Sem" },
-    { num: 4, roman: "IV", term: "Even Sem" },
-    { num: 5, roman: "V", term: "Odd Sem" },
-    { num: 6, roman: "VI", term: "Even Sem" },
-    { num: 7, roman: "VII", term: "Odd Sem" },
-    { num: 8, roman: "VIII", term: "Even Sem" },
-];
-
-// Generate standard academic years centered on current year
 function getStandardAcademicYears() {
     const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let y = currentYear + 2; y >= currentYear - 3; y--) {
-        const nextShort = String((y + 1) % 100).padStart(2, "0");
-        years.push(`${y}-${nextShort}`);
-    }
-    return years;
+    return Array.from({ length: 6 }, (_, index) => {
+        const year = currentYear + 2 - index;
+        return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+    });
 }
 
 export default function CreateSemesterModal({ onClose, onCreate }) {
     const standardYears = useMemo(() => getStandardAcademicYears(), []);
-    const [academicYear, setAcademicYear] = useState("2024-25");
-    const [isCustomYear, setIsCustomYear] = useState(false);
+    const defaultYear = standardYears[2];
+    const [academicYear, setAcademicYear] = useState(defaultYear);
+    const [customYear, setCustomYear] = useState(false);
     const [customYearText, setCustomYearText] = useState("");
-    const [semNumber, setSemNumber] = useState(1);
     const [name, setName] = useState("");
     const [department, setDepartment] = useState("");
     const [error, setError] = useState("");
+    const reduceMotion = useReducedMotion();
 
-    const currentYearStr = isCustomYear ? customYearText : academicYear;
-    const selectedSemInfo = SEMESTER_OPTIONS.find((s) => s.num === semNumber) || SEMESTER_OPTIONS[0];
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") onClose?.();
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
 
-    const handleYearSelect = (val) => {
-        if (val === "custom") {
-            setIsCustomYear(true);
-        } else {
-            setIsCustomYear(false);
-            setAcademicYear(val);
-            if (!name || name.startsWith("Semester ")) {
-                setName(`Semester ${selectedSemInfo.roman} (${val})`);
-            }
-        }
-    };
+    const currentYear = customYear ? customYearText.trim() : academicYear;
 
-    const handleCustomYearChange = (val) => {
-        setCustomYearText(val);
-        if (!name || name.startsWith("Semester ")) {
-            setName(`Semester ${selectedSemInfo.roman} (${val || "Year"})`);
-        }
-    };
-
-    const handleSemChange = (num) => {
-        setSemNumber(num);
-        const info = SEMESTER_OPTIONS.find((s) => s.num === num) || SEMESTER_OPTIONS[0];
-        if (!name || name.startsWith("Semester ")) {
-            setName(`Semester ${info.roman} (${currentYearStr})`);
-        }
-    };
-
-    const handlePresetClick = (suggested) => {
-        setName(suggested);
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const effectiveYear = isCustomYear ? customYearText.trim() : academicYear.trim();
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        const effectiveYear = currentYear.trim();
         if (!effectiveYear) {
-            setError("Academic year is required.");
-            return;
-        }
-        const trimmedName = name.trim() || `Semester ${selectedSemInfo.roman} (${effectiveYear})`;
-        if (!trimmedName) {
-            setError("Semester name is required.");
+            setError("Add an academic year to continue.");
             return;
         }
         setError("");
         onCreate({
-            name: trimmedName,
+            name: name.trim() || `Timetable · ${effectiveYear}`,
             academicYear: effectiveYear,
-            semNumber,
-            department: department.trim()
+            // Kept only for compatibility with older saved workspace records.
+            semNumber: 0,
+            department: department.trim(),
         });
     };
 
+    const transition = reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#b8ccc8]/80 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                {/* Modal Header */}
-                <div className="px-6 py-5 bg-gradient-to-r from-[#f0f6f4] to-white border-b border-[#e2e8f0] flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-[#0d9488] flex items-center justify-center text-white shadow-xs">
-                            <Sparkles className="w-5 h-5" />
+        <motion.div
+            className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#0d2824]/35 p-4 backdrop-blur-md sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+            onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}
+            role="presentation"
+        >
+            <motion.section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="workspace-dialog-title"
+                initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.985 }}
+                transition={transition}
+                className="my-auto w-full max-w-xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_36px_100px_-38px_rgba(8,38,33,0.52)]"
+            >
+                <header className="flex items-start justify-between gap-4 border-b border-[#edf2ef] px-5 py-5 sm:px-7 sm:py-6">
+                    <div className="flex items-start gap-3.5">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1e1b4b] text-white shadow-[0_8px_18px_-10px_rgba(30,27,75,0.7)]">
+                            <Sparkles className="h-5 w-5" />
                         </div>
                         <div>
-                            <h2 className="text-base font-extrabold text-[#0f172a]">Create Semester Workspace</h2>
-                            <p className="text-xs text-[#64748b] font-medium">Configure academic year, semester, and timetable workspace</p>
+                            <p className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#4f46e5]">Workspace setup</p>
+                            <h2 id="workspace-dialog-title" className="text-lg font-extrabold tracking-[-0.035em] text-[#1e1b4b] sm:text-xl">Create timetable workspace</h2>
+                            <p className="mt-1 max-w-sm text-xs leading-5 text-[#71817d]">One workbook can include every year and department.</p>
                         </div>
                     </div>
-                    <button
+                    <motion.button
+                        type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 text-[#94a3b8] hover:text-[#0f172a] transition-colors cursor-pointer"
-                        aria-label="Close modal"
+                        whileHover={{ rotate: 90, backgroundColor: "#f1f6f3" }}
+                        whileTap={{ scale: 0.92 }}
+                        transition={{ duration: 0.18 }}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#81918c] transition-colors hover:text-[#294943] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40"
+                        aria-label="Close dialog"
                     >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
+                        <X className="h-4 w-4" />
+                    </motion.button>
+                </header>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {/* ── ROW 1: Academic Year & Semester Number ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* Academic Year Selection */}
-                        <div>
-                            <label className="block text-[11px] font-bold text-[#64748b] mb-1.5 uppercase tracking-wider">
-                                Academic Year *
-                            </label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d9488] pointer-events-none" />
-                                <select
-                                    value={isCustomYear ? "custom" : academicYear}
-                                    onChange={(e) => handleYearSelect(e.target.value)}
-                                    className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488] focus:ring-1 focus:ring-[#0d9488]/30 transition-all shadow-2xs cursor-pointer appearance-none"
-                                >
-                                    {standardYears.map((yr) => (
-                                        <option key={yr} value={yr}>
-                                            AY {yr}
-                                        </option>
-                                    ))}
-                                    <option value="custom">+ Custom Year Format...</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
-                            </div>
-
-                            {/* Quick Year Selection Chips */}
-                            {!isCustomYear && (
-                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                                    {standardYears.slice(0, 3).map((yr) => (
-                                        <button
-                                            key={yr}
-                                            type="button"
-                                            onClick={() => handleYearSelect(yr)}
-                                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                                                academicYear === yr
-                                                    ? "bg-[#0d9488] text-white"
-                                                    : "bg-[#ebf4f2] hover:bg-[#ccfbf1] text-[#0f766e]"
-                                            }`}
-                                        >
-                                            {yr}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Custom Year Text Input (if Custom selected) */}
-                            {isCustomYear && (
-                                <div className="mt-2">
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. 2024-2025 or Term 1"
-                                        value={customYearText}
-                                        onChange={(e) => handleCustomYearChange(e.target.value)}
-                                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#0d9488] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-1 focus:ring-[#0d9488]/30 transition-all"
-                                        autoFocus
-                                    />
-                                    <button
+                <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+                    <div>
+                        <label htmlFor="workspace-academic-year" className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#60736d]">Academic year <span className="text-[#4338ca]">*</span></label>
+                        <div className="relative">
+                            <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4338ca]" />
+                            <select
+                                id="workspace-academic-year"
+                                value={customYear ? "custom" : academicYear}
+                                onChange={(event) => {
+                                    const value = event.target.value;
+                                    setCustomYear(value === "custom");
+                                    if (value !== "custom") setAcademicYear(value);
+                                    setError("");
+                                }}
+                                className="h-12 w-full appearance-none rounded-2xl border border-[#dce7e2] bg-[#fbfcfb] pl-11 pr-11 text-sm font-bold text-[#294943] outline-none transition-all duration-200 hover:border-[#b7d2c8] focus:border-[#4338ca] focus:bg-white focus:ring-4 focus:ring-[#4338ca]/10"
+                            >
+                                {standardYears.map((year) => <option key={year} value={year}>AY {year}</option>)}
+                                <option value="custom">Custom academic year…</option>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a9a95]" />
+                        </div>
+                        {customYear ? (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} transition={transition} className="overflow-hidden">
+                                <input
+                                    autoFocus
+                                    value={customYearText}
+                                    onChange={(event) => { setCustomYearText(event.target.value); setError(""); }}
+                                    placeholder="e.g. 2026–27"
+                                    aria-label="Custom academic year"
+                                    className="mt-2 h-11 w-full rounded-xl border border-[#dce7e2] bg-white px-3.5 text-sm font-semibold text-[#294943] outline-none transition-all placeholder:font-medium placeholder:text-[#a2b0ab] focus:border-[#4338ca] focus:ring-4 focus:ring-[#4338ca]/10"
+                                />
+                            </motion.div>
+                        ) : (
+                            <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                {standardYears.slice(0, 3).map((year) => (
+                                    <motion.button
+                                        key={year}
                                         type="button"
-                                        onClick={() => setIsCustomYear(false)}
-                                        className="text-[10px] font-bold text-[#0d9488] hover:underline mt-1"
-                                    >
-                                        ← Back to standard list
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Semester Number */}
-                        <div>
-                            <label className="block text-[11px] font-bold text-[#64748b] mb-1.5 uppercase tracking-wider">
-                                Semester No. *
-                            </label>
-                            <div className="relative">
-                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d9488] pointer-events-none" />
-                                <select
-                                    value={semNumber}
-                                    onChange={(e) => handleSemChange(Number(e.target.value))}
-                                    className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#0d9488] focus:ring-1 focus:ring-[#0d9488]/30 transition-all shadow-2xs cursor-pointer appearance-none"
-                                >
-                                    {SEMESTER_OPTIONS.map((s) => (
-                                        <option key={s.num} value={s.num}>
-                                            Semester {s.num} ({s.roman}) • {s.term}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
+                                        onClick={() => { setAcademicYear(year); setError(""); }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition-all duration-200 ${academicYear === year ? "bg-[#e8f5f0] text-[#3730a3] ring-1 ring-inset ring-[#c9e6db]" : "bg-[#f4f7f5] text-[#81918c] hover:bg-[#eaf2ee] hover:text-[#42635a]"}`}
+                                    >{year}</motion.button>
+                                ))}
                             </div>
-
-                            {/* Semester Tag */}
-                            <div className="flex items-center gap-1.5 mt-2">
-                                <span className="px-2 py-0.5 rounded-md bg-[#ccfbf1] text-[#0f766e] text-[10px] font-extrabold border border-[#99f6e4]">
-                                    Semester {selectedSemInfo.num} ({selectedSemInfo.roman})
-                                </span>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* ── ROW 2: Semester Title & Quick Presets ── */}
                     <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">
-                                Semester Title *
-                            </label>
-                            <span className="text-[10px] text-[#94a3b8]">Auto-generated or custom</span>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                            <label htmlFor="workspace-name" className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#60736d]">Workspace name <span className="text-[#9aa9a4] normal-case tracking-normal">· optional</span></label>
+                            <span className="text-[10px] text-[#9aa9a4]">Defaults to academic year</span>
                         </div>
                         <div className="relative">
-                            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d9488]" />
+                            <FileSpreadsheet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4338ca]" />
                             <input
-                                type="text"
-                                placeholder={`e.g. Semester ${selectedSemInfo.roman} (${currentYearStr})`}
+                                id="workspace-name"
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-[#b8ccc8] text-sm font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488] focus:ring-1 focus:ring-[#0d9488]/30 transition-all shadow-2xs"
+                                onChange={(event) => setName(event.target.value)}
+                                placeholder={`Timetable · ${currentYear || "Academic year"}`}
+                                className="h-12 w-full rounded-2xl border border-[#dce7e2] bg-[#fbfcfb] pl-11 pr-4 text-sm font-semibold text-[#294943] outline-none transition-all duration-200 placeholder:font-medium placeholder:text-[#a2b0ab] hover:border-[#b7d2c8] focus:border-[#4338ca] focus:bg-white focus:ring-4 focus:ring-[#4338ca]/10"
                             />
                         </div>
-                        {/* Quick Presets derived dynamically */}
-                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                            <span className="text-[10px] font-semibold text-[#94a3b8]">Suggested:</span>
-                            {[
-                                `Semester ${selectedSemInfo.roman} (${currentYearStr})`,
-                                `Sem ${selectedSemInfo.num} (${currentYearStr})`,
-                                `${selectedSemInfo.term} ${currentYearStr}`,
-                            ].map((preset) => (
-                                <button
-                                    key={preset}
-                                    type="button"
-                                    onClick={() => handlePresetClick(preset)}
-                                    className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#ebf4f2] hover:bg-[#ccfbf1] text-[#0f766e] transition-colors cursor-pointer"
-                                >
-                                    {preset}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
-                    {/* ── ROW 3: Department ── */}
                     <div>
-                        <label className="block text-[11px] font-bold text-[#64748b] mb-1.5 uppercase tracking-wider">
-                            Department <span className="text-[#94a3b8] normal-case">(optional)</span>
-                        </label>
+                        <label htmlFor="workspace-department" className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#60736d]">Department <span className="text-[#9aa9a4] normal-case tracking-normal">· optional</span></label>
                         <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d9488]" />
+                            <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4338ca]" />
                             <input
-                                type="text"
-                                placeholder="e.g. Computer Science & Engineering"
+                                id="workspace-department"
                                 value={department}
-                                onChange={(e) => setDepartment(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-[#b8ccc8] text-sm font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488] focus:ring-1 focus:ring-[#0d9488]/30 transition-all shadow-2xs"
+                                onChange={(event) => setDepartment(event.target.value)}
+                                placeholder="e.g. Computer Science & Engineering"
+                                className="h-12 w-full rounded-2xl border border-[#dce7e2] bg-[#fbfcfb] pl-11 pr-4 text-sm font-semibold text-[#294943] outline-none transition-all duration-200 placeholder:font-medium placeholder:text-[#a2b0ab] hover:border-[#b7d2c8] focus:border-[#4338ca] focus:bg-white focus:ring-4 focus:ring-[#4338ca]/10"
                             />
                         </div>
                     </div>
 
                     {error && (
-                        <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
-                            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                            <span>{error}</span>
-                        </p>
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} role="alert" className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700">
+                            <AlertCircle className="h-4 w-4 shrink-0" />{error}
+                        </motion.p>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#f1f5f9]">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2.5 text-xs font-bold text-[#64748b] hover:text-[#0f172a] bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex items-center gap-2 px-5 py-2.5 text-xs font-extrabold bg-[#0d9488] hover:bg-[#0f766e] text-white rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-                        >
-                            <span>Create & Launch Studio</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
+                    <footer className="flex flex-col-reverse gap-2 border-t border-[#edf2ef] pt-5 sm:flex-row sm:justify-end sm:gap-2.5">
+                        <motion.button type="button" onClick={onClose} whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }} className="h-11 rounded-xl px-4 text-sm font-bold text-[#71817d] transition-colors hover:bg-[#f3f7f5] hover:text-[#294943] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40">Cancel</motion.button>
+                        <motion.button type="submit" whileHover={{ y: -1, boxShadow: "0 12px 22px -12px rgba(55,48,163,0.58)" }} whileTap={{ scale: 0.98 }} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1e1b4b] px-5 text-sm font-bold text-white shadow-[0_6px_14px_-9px_rgba(30,27,75,0.65)] transition-colors hover:bg-[#3730a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/50 focus-visible:ring-offset-2">
+                            Create workspace <ArrowRight className="h-4 w-4" />
+                        </motion.button>
+                    </footer>
                 </form>
-            </div>
-        </div>
+            </motion.section>
+        </motion.div>
     );
 }

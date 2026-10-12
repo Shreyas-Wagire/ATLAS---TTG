@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Calendar,
-  Sparkles,
-  RefreshCw,
-  Home,
-  Check,
-  ChevronLeft,
-  BookOpen,
-  Cpu,
-  Zap,
-  LayoutGrid,
-  Upload,
-  Settings,
-  MonitorPlay,
   BarChart3,
-  Plus,
+  ClipboardCheck,
+  BookOpen,
+  Building2,
+  Check,
+  Cpu,
+  Home,
+  LayoutGrid,
+  MonitorPlay,
+  RefreshCw,
+  Settings,
+  Sparkles,
+  Upload,
+  Zap,
 } from 'lucide-react';
 import ExportButton from '../ExportButton.jsx';
 import ShimmerButton from './ShimmerButton.jsx';
@@ -26,8 +26,42 @@ const STAGES = [
   { id: 2, name: 'Stage 2', label: 'Configure Rules', icon: Settings },
   { id: 3, name: 'Stage 3', label: 'Engine Diagnostics', icon: Cpu },
   { id: 4, name: 'Stage 4', label: 'Scheduler Studio', icon: MonitorPlay },
-  { id: 5, name: 'Stage 5', label: 'Analytics & Export', icon: BarChart3 },
+  { id: 5, name: 'Stage 5', label: 'Review & Refine', icon: ClipboardCheck },
+  { id: 6, name: 'Stage 6', label: 'Analytics & Export', icon: BarChart3 },
 ];
+
+const interaction = {
+  whileHover: { y: -1 },
+  whileTap: { scale: 0.97 },
+  transition: { type: 'spring', stiffness: 460, damping: 30 },
+};
+
+function ViewSwitcher({ activeView, onViewChange, compact = false }) {
+  return (
+    <nav aria-label="Main navigation" className={`flex items-center gap-1 rounded-2xl border border-[#e3ebe8] bg-[#f5f8f6] p-1 ${compact ? 'w-full' : ''}`}>
+      {[
+        { id: 'home', label: 'Home', icon: Home },
+        { id: 'semesters', label: 'Semesters', icon: LayoutGrid },
+      ].map(({ id, label, icon: Icon }) => {
+        const selected = activeView === id;
+        return (
+          <motion.button
+            key={id}
+            type="button"
+            aria-current={selected ? 'page' : undefined}
+            onClick={() => onViewChange?.(id)}
+            {...interaction}
+            className={`relative flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors duration-200 ${selected ? 'text-[#1e1b4b]' : 'text-[#788984] hover:text-[#294943]'}`}
+          >
+            {selected && <motion.span layoutId="header-view-active" className="absolute inset-0 rounded-xl border border-white bg-white shadow-[0_2px_8px_rgba(28,66,57,0.08)]" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+            <Icon className="relative h-3.5 w-3.5" />
+            <span className="relative">{label}</span>
+          </motion.button>
+        );
+      })}
+    </nav>
+  );
+}
 
 export default function AppHeader({
   activeView = 'studio',
@@ -36,6 +70,7 @@ export default function AppHeader({
   maxUnlockedStep = 1,
   onStepClick,
   hasData = false,
+  canGenerate = true,
   hasTimetable = false,
   stats = {},
   onReset,
@@ -43,7 +78,9 @@ export default function AppHeader({
   isGenerating = false,
   timetable = null,
   activeSemester = null,
-  onExitToSemesters,
+  departments = [],
+  selectedDepartment = '',
+  onDepartmentChange,
 }) {
   const [scrolled, setScrolled] = useState(false);
 
@@ -54,199 +91,155 @@ export default function AppHeader({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const visibleStages = STAGES.filter((stage) => stage.id !== 1);
+
   return (
-    <header
-      className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
-        scrolled
-          ? 'navbar-scrolled border-[#b8ccc8]/60'
-          : 'bg-white/80 backdrop-blur-md border-[#b8ccc8]/40'
-      }`}
-    >
-      {/* ── ROW 1: Brand, View Navigation & Primary Actions ───────────── */}
-      <div className="max-w-[1520px] w-full mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between gap-4 relative">
-        {/* Left: Brand Identity & Semester Context */}
-        <div className="flex items-center gap-3">
-          {/* Official Brand Logo (Light PNG) */}
-          <div
-            className="flex items-center gap-2 cursor-pointer group select-none shrink-0"
+    <header className={`sticky top-0 z-50 w-full border-b transition-[background-color,border-color,box-shadow] duration-300 ${scrolled ? 'navbar-scrolled border-[#cbd9d5]/80 shadow-[0_8px_28px_-22px_rgba(20,55,49,0.45)]' : 'border-[#e3ebe8] bg-white/90 backdrop-blur-2xl'}`}>
+      <div className="mx-auto grid min-h-[68px] max-w-[1520px] grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 px-4 py-2.5 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <motion.button
+            type="button"
             onClick={() => onViewChange?.('home')}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            aria-label="ATLAS Engine home"
+            className="group flex shrink-0 items-center gap-2.5 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/50 focus-visible:ring-offset-2"
           >
-            <img
-              src="/logo.png"
-              alt="ATLAS Logo"
-              className="h-6 sm:h-7 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
-            />
-
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-extrabold text-sm text-[#0d9488] tracking-tight whitespace-nowrap">
-                Engine
-              </span>
-              <span className="text-[10px] font-bold text-[#0f766e] bg-[#ccfbf1]/80 px-1.5 py-0.5 rounded-md border border-[#99f6e4]">
-                v5.5
-              </span>
-            </div>
-
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-[9px] font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
-              NEW
+            <span className="flex items-baseline gap-1.5">
+              <span className="whitespace-nowrap text-[13px] font-extrabold tracking-[-0.04em] text-[#1e1b4b] sm:text-[15px]">ATLAS <span className="hidden font-medium tracking-[-0.02em] text-[#71817d] sm:inline">Engine</span></span>
+              <span className="hidden rounded-md border border-[#e0e9e5] bg-[#f5f8f6] px-1.5 py-0.5 text-[9px] font-bold text-[#667873] sm:inline">v6.7</span>
             </span>
-          </div>
+          </motion.button>
 
-          {/* Active Semester Badge */}
+          <span className="hidden h-7 w-px bg-[#e5ece9] xl:block" />
+          <span className="hidden items-center gap-1.5 rounded-full border border-[#dcebe5] bg-[#f5faf7] px-3 py-1.5 text-[11px] font-bold text-[#49645e] xl:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#4338ca]" />
+            Engine <span className="text-[#9aa9a4]">/</span> <span className="text-[#3730a3]">New</span>
+          </span>
+
           {activeSemester && (
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-[#ccfbf1] border border-[#99f6e4] rounded-xl shrink-0">
-              <BookOpen className="w-3.5 h-3.5 text-[#0d9488]" />
-              <span className="text-[11px] font-extrabold text-[#0f766e] truncate max-w-[140px]">
-                {activeSemester.name}
-              </span>
-              <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-[#0d9488] text-white">
-                SEM {activeSemester.semNumber}
-              </span>
+            <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-[#e3ebe8] bg-white/80 px-3 py-1.5 shadow-[0_2px_10px_rgba(20,55,49,0.035)] md:flex">
+              <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#4338ca]" />
+              <span className="max-w-[130px] truncate text-[11px] font-bold text-[#425d56]">{activeSemester.name}</span>
+              <span className="rounded-md bg-[#e8f4ef] px-1.5 py-0.5 text-[9px] font-extrabold text-[#3730a3]">AY {activeSemester.academicYear || 'Workspace'}</span>
             </div>
           )}
         </div>
 
-        {/* Center: Navigation Mode Switcher (Strictly centered on screen) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#f0f4f3] border border-[#e2e8f0] shadow-inner z-10">
-          <button
-            onClick={() => onViewChange?.('home')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
-              activeView === 'home'
-                ? 'bg-white text-[#0f766e] shadow-sm border border-[#e2e8f0]'
-                : 'text-[#94a3b8] hover:text-[#0f172a]'
-            }`}
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </button>
-          <button
-            onClick={() => onViewChange?.('semesters')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
-              activeView === 'semesters'
-                ? 'bg-[#0d9488] text-white shadow-sm'
-                : 'text-[#94a3b8] hover:text-[#0f172a]'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Semesters</span>
-          </button>
+        <div className="hidden xl:block xl:w-[220px]">
+          <ViewSwitcher activeView={activeView} onViewChange={onViewChange} />
         </div>
 
-        {/* Right: Contextual Actions & Status (No Dead Space!) */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* STUDIO VIEW ACTIONS */}
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2 lg:justify-self-end">
           {activeView === 'studio' && (
             <>
               {hasData && (
-                <button
+                <motion.button
+                  type="button"
                   onClick={onReset}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#94a3b8] hover:text-red-600 bg-white hover:bg-red-50 border border-[#e2e8f0] hover:border-red-200 rounded-xl transition-all shadow-2xs cursor-pointer"
-                  title="Reset System State"
+                  title="Reset system state"
+                  aria-label="Reset system state"
+                  whileHover={{ y: -1, color: '#b42318', borderColor: '#fecaca' }}
+                  whileTap={{ scale: 0.96 }}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#e3ebe8] bg-white px-3 text-xs font-semibold text-[#71817d] transition-colors duration-200 hover:bg-red-50"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Reset</span>
-                </button>
+                </motion.button>
               )}
-
-              {hasData && (
-                <ShimmerButton
-                  onClick={onGenerate}
-                  disabled={isGenerating}
-                  variant="primary"
-                  className="py-1.5 px-4 text-xs font-extrabold"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{isGenerating ? 'Generating...' : 'Generate Engine'}</span>
+              {hasData && canGenerate && (
+                <ShimmerButton onClick={onGenerate} disabled={isGenerating} variant="primary" className="h-10 px-3.5 text-xs font-extrabold sm:px-4">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{isGenerating ? 'Generating…' : 'Generate Engine'}</span>
+                  <span className="sm:hidden">Generate</span>
                 </ShimmerButton>
               )}
-
-              {hasTimetable && (
-                <ExportButton timetable={timetable} />
-              )}
+              {hasTimetable && <ExportButton timetable={timetable} />}
             </>
           )}
 
-          {/* SEMESTERS VIEW ACTIONS */}
           {activeView === 'semesters' && (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ccfbf1]/60 border border-[#99f6e4] text-xs text-[#0f766e] font-extrabold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Engine Active</span>
+            <>
+              <div className="hidden items-center gap-2 rounded-full border border-[#dcebe5] bg-[#f5faf7] px-3 py-2 text-[11px] font-bold text-[#477568] sm:flex">
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
+                Engine active
               </div>
-              <ShimmerButton
-                onClick={() => onViewChange?.('home')}
-                variant="secondary"
-                className="py-1.5 px-3.5 text-xs font-extrabold"
-              >
-                <Home className="w-3.5 h-3.5" />
-                <span>Overview</span>
+              <ShimmerButton onClick={() => onViewChange?.('home')} variant="secondary" className="h-10 px-3.5 text-xs font-extrabold">
+                <Home className="h-3.5 w-3.5" /><span>Overview</span>
               </ShimmerButton>
-            </div>
+            </>
           )}
 
-          {/* HOME VIEW ACTIONS */}
           {activeView === 'home' && (
-            <ShimmerButton
-              onClick={() => onViewChange?.('semesters')}
-              variant="primary"
-              className="py-1.5 px-4 text-xs font-extrabold"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Explore Semesters</span>
+            <ShimmerButton onClick={() => onViewChange?.('semesters')} variant="primary" className="h-10 px-3.5 text-xs font-extrabold sm:px-4">
+              <Zap className="h-3.5 w-3.5" /><span>Explore Semesters</span>
             </ShimmerButton>
           )}
         </div>
+
+        <div className="col-span-2 xl:hidden">
+          <ViewSwitcher activeView={activeView} onViewChange={onViewChange} compact />
+        </div>
       </div>
 
-      {/* ── ROW 2: Dedicated Stage Pipeline Sub-Header (Studio View) ──── */}
-      {activeView === 'studio' && (
-        <div className="bg-[#f8fafb] border-t border-[#e2e8f0] py-1.5">
-          <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-            {STAGES.map((stage, idx) => {
-              const isCompleted = stage.id < activeStep;
-              const isActive = stage.id === activeStep;
-              const isUnlocked = stage.id <= maxUnlockedStep;
-
-              return (
-                <React.Fragment key={stage.id}>
-                  <button
-                    onClick={() => isUnlocked && onStepClick?.(stage.id)}
-                    disabled={!isUnlocked}
-                    className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${
-                      isActive
-                        ? 'bg-white text-[#0f766e] shadow-sm border border-[#0d9488]/30 ring-1 ring-[#0d9488]/15'
-                        : isCompleted
-                        ? 'bg-[#0d9488]/10 text-[#0f766e] border border-[#0d9488]/20 hover:bg-[#0d9488]/20'
-                        : 'bg-white text-[#94a3b8] border border-[#e2e8f0] opacity-60'
-                    } ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-extrabold ${
-                        isActive
-                          ? 'bg-[#0d9488] text-white shadow-2xs'
-                          : isCompleted
-                          ? 'bg-[#0f766e] text-white'
-                          : 'bg-[#d2dfdc] text-white'
-                      }`}
+      {activeView === 'studio' && activeStep > 1 && (
+        <div className="border-t border-[#e9efec] bg-[#fbfcfb]/90">
+          <div className="mx-auto flex max-w-[1520px] flex-col gap-2 px-4 py-2.5 sm:px-6 lg:flex-row lg:items-center lg:gap-5 lg:px-8">
+            {departments.length > 0 && (
+              <nav aria-label="Department workspaces" className="flex shrink-0 items-center gap-1 overflow-x-auto no-scrollbar lg:border-r lg:border-[#e6eeea] lg:pr-4">
+                <span className="mr-1 hidden items-center gap-1.5 px-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#9aa9a4] lg:flex"><Building2 className="h-3 w-3" /> Workspace</span>
+                {departments.map((department) => {
+                  const selected = department === selectedDepartment;
+                  return (
+                    <motion.button
+                      key={department}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onDepartmentChange?.(department)}
+                      whileHover={{ y: -1 }}
+                      whileTap={{ scale: 0.96 }}
+                      className={`relative shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40 ${selected ? 'text-[#3730a3]' : 'text-[#7b8b86] hover:bg-white hover:text-[#294943]'}`}
                     >
-                      {isCompleted ? <Check className="w-3 h-3" /> : stage.id}
-                    </div>
+                      {selected && <motion.span layoutId="active-department-pill" transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="absolute inset-0 rounded-lg border border-[#cce8df] bg-[#eaf6f1] shadow-[0_2px_8px_rgba(55,48,163,0.08)]" />}
+                      <span className="relative">{department}</span>
+                    </motion.button>
+                  );
+                })}
+              </nav>
+            )}
 
-                    <div className="flex flex-col text-left">
-                      <span className="font-extrabold text-[11px] leading-tight">
-                        {stage.name}
+            <nav aria-label="Timetable stages" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto no-scrollbar">
+              {visibleStages.map((stage, index) => {
+                const isCompleted = stage.id < activeStep;
+                const isActive = stage.id === activeStep;
+                const isUnlocked = stage.id <= maxUnlockedStep;
+                const StageIcon = stage.icon;
+                return (
+                  <React.Fragment key={stage.id}>
+                    <motion.button
+                      type="button"
+                      onClick={() => isUnlocked && onStepClick?.(stage.id)}
+                      disabled={!isUnlocked}
+                      aria-current={isActive ? 'step' : undefined}
+                      whileHover={isUnlocked ? { y: -1 } : undefined}
+                      whileTap={isUnlocked ? { scale: 0.97 } : undefined}
+                      transition={{ type: 'spring', stiffness: 430, damping: 30 }}
+                      className={`relative flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40 ${isActive ? 'text-[#3730a3]' : isCompleted ? 'text-[#4f8075] hover:bg-[#eef7f3]' : 'text-[#a0afaa]'} ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    >
+                      {isActive && <motion.span layoutId="active-stage-pill" transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="absolute inset-0 rounded-xl border border-[#d5eae2] bg-white shadow-[0_3px_12px_rgba(24,66,57,0.07)]" />}
+                      <span className={`relative grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-colors duration-200 ${isActive ? 'bg-[#4338ca] text-white shadow-[0_3px_8px_rgba(13,148,136,0.22)]' : isCompleted ? 'bg-[#e3f2eb] text-[#3730a3]' : 'bg-[#edf2f0] text-[#a0afaa]'}`}>
+                        {isCompleted ? <Check className="h-3.5 w-3.5" /> : <StageIcon className="h-3.5 w-3.5" />}
                       </span>
-                      <span className="text-[10px] opacity-70 leading-tight font-medium">
-                        {stage.label}
+                      <span className="relative flex flex-col leading-tight">
+                        <span className="text-[10px] font-extrabold">{stage.name}</span>
+                        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-75">{stage.label}</span>
                       </span>
-                    </div>
-                  </button>
-
-                  {idx < STAGES.length - 1 && (
-                    <div className="w-6 h-[1px] bg-[#d2dfdc] shrink-0" />
-                  )}
-                </React.Fragment>
-              );
-            })}
+                    </motion.button>
+                    {index < visibleStages.length - 1 && <span aria-hidden="true" className="h-px min-w-3 flex-1 bg-gradient-to-r from-[#dce8e3] to-[#e8efec]" />}
+                  </React.Fragment>
+                );
+              })}
+            </nav>
           </div>
         </div>
       )}

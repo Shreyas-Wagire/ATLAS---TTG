@@ -85,6 +85,10 @@ function compactSemesterForStorage(semester) {
 
     return {
         ...semester,
+        scheduleVersions: (semester.scheduleVersions || []).slice(-3),
+        auditTrail: (semester.auditTrail || []).slice(-30),
+        configuredDepartments: semester.configuredDepartments || [],
+        reviewedDepartments: semester.reviewedDepartments || [],
         timetable: compactedTimetable,
         // Pre-compute cachedStats for fast dashboard card rendering
         cachedStats: getSemesterStats(semester),
@@ -247,6 +251,17 @@ export function createSemester({ name, academicYear, semNumber, department = "" 
         syncRules: [],
         resources: { classrooms: [], labs: [], tutorialRooms: [] },
         facultyConstraints: [],
+        collegeData: null,
+        isMultiDept: false,
+        departmentOrder: [],
+        departmentResults: {},
+        subjects: [],
+        uploadValidation: [],
+        uploadedFileName: "",
+        scheduleVersions: [],
+        auditTrail: [],
+        configuredDepartments: [],
+        reviewedDepartments: [],
     };
 
     const all = loadAll();

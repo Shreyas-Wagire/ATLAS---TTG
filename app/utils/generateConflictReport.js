@@ -20,6 +20,7 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
     // Build lookup maps
     const facultySlotMap = {}; // faculty -> day -> slot -> [{divisionKey, subject, type}]
     const roomSlotMap = {};    // room -> day -> slot -> [{divisionKey, subject, type}]
+    const batchSlotMap = {};   // division -> batch -> day -> slot -> [{subject, type, faculty}]
 
     function registerFaculty(faculty, day, slot, divisionKey, subject, type, isSync = false) {
         if (!isRealFaculty(faculty)) return;
@@ -38,6 +39,15 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
         roomSlotMap[room][day][slot].push({ divisionKey, subject, type });
     }
 
+    function registerBatch(batch, day, slot, divisionKey, subject, type, faculty) {
+        if (!batch) return;
+        const key = `${divisionKey}|${batch}`;
+        if (!batchSlotMap[key]) batchSlotMap[key] = { divisionKey, batch, days: {} };
+        if (!batchSlotMap[key].days[day]) batchSlotMap[key].days[day] = {};
+        if (!batchSlotMap[key].days[day][slot]) batchSlotMap[key].days[day][slot] = [];
+        batchSlotMap[key].days[day][slot].push({ subject, type, faculty });
+    }
+
     Object.entries(timetable || {}).forEach(([divisionKey, daysMap]) => {
         days.forEach((day) => {
             const slots = daysMap?.[day] || [];
@@ -45,6 +55,42 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
                 if (!cell) return;
                 const type = cell.type;
                 if (!type) return;
+
+                // The continuation cell mirrors the head cell's batch arrays;
+                // count the logical two-hour practical only once, while still
+                // running the existing per-slot faculty/resource checks below.
+                if (type === "PRACTICAL" && cell.span !== 0) {
+                    (cell.batchAllocations || []).forEach((allocation) => {
+                        [slotIdx, slotIdx + 1].forEach((occupiedSlot) => registerBatch(
+                            allocation.batch, day, occupiedSlot, divisionKey,
+                            allocation.subjectName || allocation.subject || cell.subject,
+                            "PRACTICAL", allocation.faculty
+                        ));
+                    });
+                    (cell.tutorialAllocations || []).forEach((allocation) => registerBatch(
+                        allocation.batch, day,
+                        Number.isInteger(allocation.labSubSlot) ? allocation.labSubSlot : slotIdx,
+                        divisionKey, allocation.subjectName || allocation.subject || "Tutorial",
+                        "TUTORIAL", allocation.faculty
+                    ));
+                } else if (type === "TUTORIAL" && cell.span !== 0 && Array.isArray(cell.batchAllocations)) {
+                    cell.batchAllocations.forEach((allocation) => registerBatch(
+                        allocation.batch, day, slotIdx, divisionKey,
+                        allocation.subjectName || allocation.subject || cell.subject,
+                        "TUTORIAL", allocation.faculty
+                    ));
+                } else if ((type === "LECTURE" || type === "THEORY") && cell.span !== 0) {
+                    const divisionSessions = (sessionPool || []).filter((session) =>
+                        (session._deptDivKey || `${session.year}-${session.division}`) === divisionKey && session.batch
+                    );
+                    const batches = [...new Set(divisionSessions.map((session) => session.batch))];
+                    const occupiedSlots = cell.span === 2 ? [slotIdx, slotIdx + 1] : [slotIdx];
+                    batches.forEach((batch) => occupiedSlots.forEach((occupiedSlot) => registerBatch(
+                        batch, day, occupiedSlot, divisionKey,
+                        cell.subjectName || cell.subject || cell.courseCode,
+                        "LECTURE", cell.faculty
+                    )));
+                }
 
                 if ((type === "PRACTICAL" || type === "TUTORIAL") && cell.batchAllocations) {
                     const seenFaculty = new Set();
@@ -136,6 +182,28 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
         });
     });
 
+    // A batch must never have two active sessions in the same period. This
+    // catches accidental practical/tutorial overlaps that are otherwise
+    // hidden inside a shared practical cell.
+    Object.values(batchSlotMap).forEach(({ divisionKey, batch, days: dayMap }) => {
+        Object.entries(dayMap).forEach(([day, slotMap]) => {
+            Object.entries(slotMap).forEach(([slot, usages]) => {
+                if (usages.length < 2) return;
+                conflicts.push({
+                    type: "BATCH_SESSION_OVERLAP",
+                    severity: "CRITICAL",
+                    divisionKey,
+                    batch,
+                    day,
+                    slot: Number(slot),
+                    affectedSessions: usages,
+                    description: `Batch ${batch} has overlapping ${usages.map((usage) => usage.type.toLowerCase()).join(" and ")} sessions on ${day} slot ${Number(slot) + 1}.`,
+                    suggestion: "Move one session so each batch has only one course in that period.",
+                });
+            });
+        });
+    });
+
     // 1. FACULTY CLASH
     Object.entries(facultySlotMap).forEach(([faculty, dayMap]) => {
         Object.entries(dayMap).forEach(([day, slotMap]) => {
@@ -215,6 +283,7 @@ export function generateConflictReport(timetable, sessionPool, globalConstraints
         LAB_CLASH: 0,
         TUTORIAL_ROOM_CLASH: 0,
         BATCH_CLASH: 0,
+        BATCH_SESSION_OVERLAP: 0,
         DIVISION_CLASH: 0,
         RESOURCE_CLASH: 0,
         PRACTICAL_BREAK_VIOLATION: 0,

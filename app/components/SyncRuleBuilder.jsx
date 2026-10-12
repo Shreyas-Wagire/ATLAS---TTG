@@ -38,28 +38,28 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
     };
 
     return (
-        <div className="rounded-2xl bg-white border border-[#b8ccc8] shadow-xs overflow-hidden">
-            <div className="px-6 py-4 bg-[#ebf4f2] border-b border-[#b8ccc8] flex items-center justify-between">
+        <div className="atlas-settings-card rounded-[22px] bg-white border border-[#e1e9e6] shadow-[0_12px_40px_-32px_rgba(20,57,51,0.3)] overflow-hidden">
+            <div className="px-5 sm:px-6 py-5 bg-white border-b border-[#edf1ef] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0f766e]">
+                    <div className="w-9 h-9 rounded-xl bg-[#edf6f3] border border-[#dcebe6] flex items-center justify-center text-[#3730a3]">
                         <Link2 className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold text-[#0f172a]">
+                        <h3 className="text-sm font-bold tracking-tight text-[#142d2a]">
                             Same-Slot Elective Synchronization Rules
                         </h3>
-                        <p className="text-[11px] text-[#64748b] font-medium">
+                        <p className="text-xs text-[#71817d] mt-0.5">
                             Force parallel elective choices to lock into identical time slots automatically
                         </p>
                     </div>
                 </div>
-                <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
+                <span className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#f1f7f4] text-[#3e6c5e] border border-[#dcebe3]">
                     {syncRules.length} Sync Groups
                 </span>
             </div>
 
             <div className="p-6 space-y-6">
-                <form onSubmit={handleAddRule} className="p-4 rounded-xl bg-[#ebf4f2]/60 border border-[#b8ccc8] space-y-4">
+                <form onSubmit={handleAddRule} className="p-5 rounded-2xl bg-[#f7f9f8] border border-[#e7eeeb] space-y-4">
                     <h4 className="text-xs font-bold uppercase text-[#64748b] tracking-wider">
                         Configure Elective Parallel Group
                     </h4>
@@ -73,7 +73,7 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
                             placeholder="e.g. Open Elective III Group"
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value)}
-                            className="w-full max-w-md px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0d9488]"
+                            className="w-full max-w-md px-3 py-2 rounded-lg bg-white border border-[#b8ccc8] text-xs font-bold text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#4338ca]"
                         />
                     </div>
 
@@ -91,7 +91,7 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
                                         onClick={() => toggleCourse(cName)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
                                             isSelected
-                                                ? "bg-[#0d9488] text-white shadow-2xs"
+                                                ? "bg-[#4338ca] text-white shadow-2xs"
                                                 : "bg-[#ebf4f2] text-[#475569] hover:bg-[#d6e2df] border border-[#b8ccc8]"
                                         }`}
                                     >
@@ -107,7 +107,7 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
                         <button
                             type="submit"
                             disabled={!groupName || selectedCourses.length < 2}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0d9488] hover:bg-[#0f766e] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4338ca] hover:bg-[#3730a3] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Create Parallel Sync Rule</span>
@@ -131,15 +131,15 @@ export default function SyncRuleBuilder({ subjects = [], syncRules = [], setSync
                                 className="p-4 rounded-xl bg-white border border-[#b8ccc8] flex items-center justify-between gap-4 shadow-2xs"
                             >
                                 <div>
-                                    <h5 className="text-xs font-extrabold text-[#0f766e] mb-1 flex items-center gap-1">
-                                        <Zap className="w-3.5 h-3.5 text-[#0d9488]" />
+                                    <h5 className="text-xs font-extrabold text-[#3730a3] mb-1 flex items-center gap-1">
+                                        <Zap className="w-3.5 h-3.5 text-[#4338ca]" />
                                         <span>{rule.groupName}</span>
                                     </h5>
                                     <div className="flex flex-wrap gap-1.5">
                                         {rule.courses.map((c, i) => (
                                             <span
                                                 key={i}
-                                                className="px-2 py-0.5 rounded bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4] text-[11px] font-bold"
+                                                className="px-2 py-0.5 rounded bg-[#eef2ff] text-[#3730a3] border border-[#c7d2fe] text-[11px] font-bold"
                                             >
                                                 {c}
                                             </span>

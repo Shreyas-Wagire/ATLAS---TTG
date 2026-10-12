@@ -99,7 +99,7 @@ export function isFacultyFreeAt(
     if (timetable && typeof timetable === "object") {
         for (const [divKey, daysMap] of Object.entries(timetable)) {
             const cell = daysMap?.[day]?.[slotIdx];
-            if (!cell || cell.span === 0) continue;
+            if (!cell) continue;
 
             // Skip cells that are being moved as part of the current cascade transaction
             if (excludePositions && excludePositions.has(`${divKey}|${day}|${slotIdx}`)) {
@@ -112,6 +112,12 @@ export function isFacultyFreeAt(
                     return false;
                 }
             }
+
+            if (Array.isArray(cell.tutorialAllocations) && cell.tutorialAllocations.some((allocation) =>
+                allocation.faculty === faculty && (allocation.labSubSlot ?? slotIdx) === slotIdx
+            )) return false;
+
+            if (cell.span === 0) continue;
 
             // Check main faculty
             if (cell.faculty === faculty) {
@@ -162,17 +168,18 @@ export function checkBatchCollision(timetable, divKey, day, slot, batch, nextSlo
     const checkSlots = [slot];
     if (nextSlot !== null && nextSlot !== undefined) checkSlots.push(nextSlot);
 
+    // Batch labels such as T1 repeat in every department. A batch can only
+    // belong to its own year/division grid, so checking other departments
+    // incorrectly blocks valid placements in a college-wide timetable.
+    const daysMap = timetable?.[divKey];
     for (const s of checkSlots) {
-        for (const [dk, daysMap] of Object.entries(timetable)) {
-            if (excludePositions && excludePositions.has(`${dk}|${day}|${s}`)) continue;
-            const cell = daysMap?.[day]?.[s];
-            if (!cell) continue;
+        if (excludePositions && excludePositions.has(`${divKey}|${day}|${s}`)) continue;
+        const cell = daysMap?.[day]?.[s];
+        if (!cell) continue;
 
-            if (cell.batch === batch) return true;
-            if (Array.isArray(cell.batchAllocations)) {
-                if (cell.batchAllocations.some((a) => a.batch === batch)) return true;
-            }
-        }
+        if (cell.batch === batch) return true;
+        if (Array.isArray(cell.batchAllocations) && cell.batchAllocations.some((a) => a.batch === batch)) return true;
+        if (Array.isArray(cell.tutorialAllocations) && cell.tutorialAllocations.some((a) => a.batch === batch)) return true;
     }
     return false;
 }
@@ -937,7 +944,7 @@ export function attemptCascadePlacement({
     config: userConfig = {},
 }) {
     const config = { ...DEFAULT_CONFIG, ...userConfig };
-    const divKey = `${session.year}-${session.division}`;
+    const divKey = session._deptDivKey || `${session.year}-${session.division}`;
 
     if (!timetable[divKey]) {
         const diag = {

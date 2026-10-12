@@ -1,33 +1,34 @@
 @import "tailwindcss";
 
 /* ================================================
-   MINIMAL COOL MINT SAAS DESIGN SYSTEM
+   ATLAS ROYAL LIGHT DESIGN SYSTEM
    ================================================ */
 
 :root {
   /* ---- 3-Tier Contrast Hierarchy ---- */
-  --color-canvas: #d2dfdc;         /* Darker than Off-White Canvas behind TT */
+  --color-canvas: #f5f6fb;         /* Cool porcelain canvas */
   --color-surface: #ffffff;        /* Crisp Pure White Cards */
-  --color-surface-subtle: #f0f4f3; /* Off-White Header & Stepper Surface */
-  --color-surface-hover: #c0d2ce;  /* Interactive Hover Surface */
+  --color-surface-subtle: #f8f9fd; /* Quiet header and stepper surface */
+  --color-surface-hover: #eef0fa;  /* Restrained interactive surface */
 
-  /* ---- Cool Mint Palette ---- */
-  --color-mint-light: #ccfbf1;     /* Light Mint Ice */
-  --color-mint-badge: #99f6e4;
-  --color-accent: #0d9488;         /* Cool Mint Teal Accent */
-  --color-accent-dark: #0f766e;    /* Deep Cool Mint Dark Text */
-  --color-accent-light: #2dd4bf;
+  /* ---- Royal Palette ---- */
+  --color-mint-light: #eef2ff;     /* Royal mist */
+  --color-mint-badge: #c7d2fe;
+  --color-accent: #4338ca;         /* Royal indigo */
+  --color-accent-dark: #3730a3;    /* Deep royal */
+  --color-accent-light: #818cf8;
+  --color-accent-brass: #a98245;   /* Restrained academic brass */
 
   /* ---- Borders ---- */
-  --color-border: #b8ccc8;
-  --color-border-strong: #98b5b0;
-  --color-border-muted: #d2dfdc;
+  --color-border: #e0e4ef;
+  --color-border-strong: #c6cde0;
+  --color-border-muted: #eceef5;
 
   /* ---- Brand & Primary Accent ---- */
-  --color-accent-bg: #ccfbf1;
-  --color-accent-bg-hover: #99f6e4;
+  --color-accent-bg: #eef2ff;
+  --color-accent-bg-hover: #e0e7ff;
 
-  /* ---- Session Types (Cool Mint Theme) ---- */
+  /* ---- Session Types (preserved for timetable matrix readability) ---- */
   --color-lecture: #3b82f6;        /* Clean Blue */
   --color-lecture-bg: #eff6ff;
   --color-lecture-border: #3b82f6;
@@ -36,7 +37,7 @@
   --color-tutorial-bg: #f5f3ff;
   --color-tutorial-border: #8b5cf6;
 
-  --color-practical: #0d9488;      /* Cool Mint Teal */
+  --color-practical: #0d9488;      /* Practical sessions retain their established matrix color */
   --color-practical-bg: #e6f4f1;
   --color-practical-border: #0d9488;
 
@@ -45,18 +46,18 @@
   --color-fixed-border: #ef4444;
 
   /* ---- Typography ---- */
-  --color-text-heading: #0f172a;   /* Deep Slate Black */
-  --color-text-primary: #334155;   /* Charcoal Body */
-  --color-text-body: #475569;
-  --color-text-secondary: #64748b; /* Muted Slate Grey */
-  --color-text-muted: #94a3b8;
+  --color-text-heading: #191c3b;   /* Royal ink */
+  --color-text-primary: #343751;
+  --color-text-body: #565b73;
+  --color-text-secondary: #777d96;
+  --color-text-muted: #9da2b5;
 
   /* ---- Shadows & Depth ---- */
-  --shadow-xs: 0 1px 2px rgba(13, 148, 136, 0.04);
-  --shadow-sm: 0 2px 4px rgba(13, 148, 136, 0.05), 0 4px 12px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 10px rgba(13, 148, 136, 0.07), 0 12px 28px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 8px 20px rgba(13, 148, 136, 0.1), 0 24px 48px rgba(0, 0, 0, 0.04);
-  --shadow-accent: 0 4px 14px rgba(13, 148, 136, 0.35);
+  --shadow-xs: 0 1px 2px rgba(18, 45, 42, 0.04);
+  --shadow-sm: 0 2px 4px rgba(18, 45, 42, 0.04), 0 8px 20px rgba(18, 45, 42, 0.025);
+  --shadow-md: 0 4px 12px rgba(18, 45, 42, 0.055), 0 16px 32px rgba(18, 45, 42, 0.035);
+  --shadow-lg: 0 8px 24px rgba(18, 45, 42, 0.07), 0 28px 56px rgba(18, 45, 42, 0.04);
+  --shadow-accent: 0 4px 16px rgba(67, 56, 202, 0.24);
 
   /* ---- Border Radius ---- */
   --radius-sm: 6px;
@@ -66,7 +67,7 @@
   --radius-full: 9999px;
 
   /* ---- Gradients ---- */
-  --gradient-accent: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  --gradient-accent: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
@@ -81,11 +82,20 @@ html {
 }
 
 body {
-  background: var(--color-canvas);
+  background: #f5f6fb;
   color: var(--color-text-body);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-editorial), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: 0.01em;
 }
 
 /* ============ Custom Scrollbar ============ */
@@ -94,14 +104,51 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #d2dfdc;
+  background: #f5f6fb;
 }
 ::-webkit-scrollbar-thumb {
-  background: #b8ccc8;
+  background: #c9cddd;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #98b5b0;
+  background: #9db2ab;
+}
+
+::selection {
+  color: #312e81;
+  background: #e0e7ff;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.atlas-settings-card input:not([type="checkbox"]),
+.atlas-settings-card select,
+.atlas-settings-card textarea,
+.atlas-modal-form input:not([type="checkbox"]),
+.atlas-modal-form select,
+.atlas-modal-form textarea {
+  border-color: #e0e4ef;
+  border-radius: 0.75rem;
+  color: #343751;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.atlas-settings-card input:not([type="checkbox"]):focus,
+.atlas-settings-card select:focus,
+.atlas-settings-card textarea:focus,
+.atlas-modal-form input:not([type="checkbox"]):focus,
+.atlas-modal-form select:focus,
+.atlas-modal-form textarea:focus {
+  border-color: #818cf8;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
 /* ============ Keyframe Animations ============ */
@@ -165,8 +212,8 @@ body {
 /* ---- Subtle Academic Grid Pattern ---- */
 .atlas-grid-bg {
   background-image:
-    linear-gradient(rgba(13, 148, 136, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(13, 148, 136, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(67, 56, 202, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(67, 56, 202, 0.03) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -182,7 +229,7 @@ body {
   right: -1rem;
   width: 1rem;
   height: 2px;
-  background: linear-gradient(90deg, #0d9488, #99f6e4);
+  background: linear-gradient(90deg, #4338ca, #c7d2fe);
   transform: translateY(-50%);
 }
 
@@ -193,7 +240,7 @@ body {
     right: 50%;
     width: 2px;
     height: 0.75rem;
-    background: linear-gradient(180deg, #0d9488, #99f6e4);
+    background: linear-gradient(180deg, #4338ca, #c7d2fe);
     transform: translateX(50%);
   }
 }
@@ -211,8 +258,8 @@ body {
 
 .premium-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
-  border-color: #99f6e4;
+  box-shadow: 0 8px 24px rgba(67, 56, 202, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-color: #c7d2fe;
 }
 
 /* ---- Stat Number Styling ---- */
@@ -228,13 +275,13 @@ body {
   backdrop-filter: blur(16px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
   border-bottom-color: rgba(184, 204, 200, 0.6) !important;
-  box-shadow: 0 1px 8px rgba(13, 148, 136, 0.06), 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 8px rgba(67, 56, 202, 0.06), 0 0 1px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* ---- Subtle Pulse for Pipeline Nodes ---- */
 @keyframes subtlePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.15); }
-  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(67, 56, 202, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(67, 56, 202, 0); }
 }
 
 .pipeline-node-active {
@@ -264,8 +311,8 @@ body {
 
 .hover-lift:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 30px -8px rgba(13, 148, 136, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
-  border-color: rgba(13, 148, 136, 0.35);
+  box-shadow: 0 12px 30px -8px rgba(67, 56, 202, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  border-color: rgba(67, 56, 202, 0.35);
 }
 
 .glow-mint {

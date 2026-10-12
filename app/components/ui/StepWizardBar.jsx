@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Upload, Sliders, Cpu, Calendar, BarChart3, Check } from 'lucide-react';
+import { Upload, Sliders, Cpu, Calendar, BarChart3, ClipboardCheck, Check } from 'lucide-react';
 
 const STAGES = [
   { id: 1, name: 'Stage 1', label: 'Import Data', icon: Upload },
   { id: 2, name: 'Stage 2', label: 'Configure Rules', icon: Sliders },
   { id: 3, name: 'Stage 3', label: 'Engine Diagnostics', icon: Cpu },
   { id: 4, name: 'Stage 4', label: 'Scheduler Studio', icon: Calendar },
-  { id: 5, name: 'Stage 5', label: 'Analytics & Export', icon: BarChart3 },
+  { id: 5, name: 'Stage 5', label: 'Review & Refine', icon: ClipboardCheck },
+  { id: 6, name: 'Stage 6', label: 'Analytics & Export', icon: BarChart3 },
 ];
 
 export default function StepWizardBar({ activeStep, maxUnlockedStep, onStepClick }) {
@@ -29,18 +30,18 @@ export default function StepWizardBar({ activeStep, maxUnlockedStep, onStepClick
                   disabled={!isUnlocked}
                   className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${
                     isActive
-                      ? 'bg-[#ccfbf1] text-[#0f766e] border border-[#0d9488] shadow-xs ring-2 ring-[#0d9488]/30'
+                      ? 'bg-[#eef2ff] text-[#3730a3] border border-[#4338ca] shadow-xs ring-2 ring-[#4338ca]/30'
                       : isCompleted
-                      ? 'bg-[#0d9488]/15 text-[#0f766e] border border-[#0d9488]/40 hover:bg-[#0d9488]/25'
+                      ? 'bg-[#4338ca]/15 text-[#3730a3] border border-[#4338ca]/40 hover:bg-[#4338ca]/25'
                       : 'bg-white text-[#64748b] border border-[#b8ccc8] opacity-70'
                   } ${isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                 >
                   <div
                     className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-extrabold ${
                       isActive
-                        ? 'bg-[#0d9488] text-white'
+                        ? 'bg-[#4338ca] text-white'
                         : isCompleted
-                        ? 'bg-[#0f766e] text-white'
+                        ? 'bg-[#3730a3] text-white'
                         : 'bg-[#b8ccc8] text-[#64748b]'
                     }`}
                   >

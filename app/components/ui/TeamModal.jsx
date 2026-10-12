@@ -2,20 +2,50 @@
 
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { 
-    X, Sparkles, Award, Code, Layers, Users, Cpu, ShieldCheck, 
-    Heart, ExternalLink, Github, Mail, GraduationCap, CheckCircle2 
-} from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { X, Heart, BookOpen } from "lucide-react";
+
+const teamMembers = [
+    {
+        name: "Shreyas Wagire",
+        role: "Project Lead & Core Algorithm Architect",
+        subRole: "Solver lead · Core optimization",
+        scheduleMark: [0, 2, 5, 8, 11, 13, 16, 19],
+        initials: "SW",
+        description: "Conceptualized and engineered the ATLAS core solver: 4-layer constraint optimization, 2D multi-course practical stacking, DAPS/RCAA heuristics, and self-healing CASC cascade repair.",
+        skills: ["Algorithm solver", "Constraint optimization", "Next.js", "CASC engine"],
+    },
+    {
+        name: "Shreya Chougule",
+        role: "Systems & Data Architecture",
+        subRole: "Parser · Data model engineering",
+        scheduleMark: [1, 3, 4, 7, 10, 12, 15, 18],
+        initials: "SC",
+        description: "Architected automated department workbook detection, course-load normalization, faculty availability rules, and multi-sheet timetable exports.",
+        skills: ["Data normalization", "XLSX processing", "Schema validation", "Presentations"],
+    },
+    {
+        name: "Shruti Khanchanale",
+        role: "UI/UX & Product Design",
+        subRole: "Interface architecture · Research",
+        scheduleMark: [0, 4, 6, 9, 11, 14, 17, 19],
+        initials: "SK",
+        description: "Designed the ATLAS interface, interactive timetable studio, conflict diagnostics, validation reports, and user research experience.",
+        skills: ["Design systems", "2D matrix studio", "Analytics", "UX research"],
+    },
+];
 
 export default function TeamModal({ isOpen, onClose }) {
+    const reduceMotion = useReducedMotion();
+
     useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e) => {
-            if (e.key === "Escape") onClose();
+        if (!isOpen) return undefined;
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") onClose();
         };
-        window.addEventListener("keydown", handleKeyDown);
         const originalOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
+        window.addEventListener("keydown", handleKeyDown);
         return () => {
             window.removeEventListener("keydown", handleKeyDown);
             document.body.style.overflow = originalOverflow;
@@ -24,231 +54,129 @@ export default function TeamModal({ isOpen, onClose }) {
 
     if (!isOpen || typeof document === "undefined") return null;
 
-    const teamMembers = [
-        {
-            name: "Shreyas Wagire",
-            role: "Project Lead & Core Algorithm Architect",
-            subRole: "Solver Lead • Core Optimization",
-            clearance: "LEVEL 01 • PROJECT LEAD",
-            badge: "LEAD",
-            badgeColor: "bg-[#0d9488] text-white border-[#0f766e]",
-            accentRing: "ring-[#0d9488]/30",
-            avatarBg: "bg-gradient-to-tr from-[#0d9488] via-[#0f766e] to-[#2dd4bf]",
-            idCode: "ATLAS-2026-SW01",
-            initials: "SW",
-            description: "Conceptualized and engineered the ATLAS core solver: 4-layer constraint optimization, 2D multi-course practical stacking (4→3→2→1), dynamic DAPS/RCAA heuristics, and self-healing CASC cascade repair.",
-            skills: ["Algorithm Solver", "Constraint Optimization", "Next.js Architecture", "CASC Engine"],
-            isLead: true,
-        },
-        {
-            name: "Shreya Chougule",
-            role: "Systems & Data Architecture",
-            subRole: "Parser & Data Model Engineering with Great Presenter",
-            clearance: "LEVEL 02 • CO-LEAD",
-            badge: "CO-LEAD",
-            badgeColor: "bg-[#2563eb] text-white border-[#1d4ed8]",
-            accentRing: "ring-blue-500/30",
-            avatarBg: "bg-gradient-to-tr from-[#2563eb] via-[#1d4ed8] to-[#06b6d4]",
-            idCode: "ATLAS-2026-SC02",
-            initials: "SC",
-            description: "Parser & Data Model Engineering with Great Presenter. Architected automated departmental Excel sheet detection, dynamic course-load normalization, faculty constraint blackouts, and multi-sheet XLSX export matrices.",
-            skills: ["Data Normalization", "XLSX Processing Engine", "Schema Validation", "Great Presenter"],
-            isLead: false,
-        },
-        {
-            name: "Shruti Khanchanale",
-            role: "UI/UX & Product Design",
-            subRole: "Interface Architecture & Analytics and Research",
-            clearance: "LEVEL 02 • CORE DESIGN",
-            badge: "CORE",
-            badgeColor: "bg-[#7c3aed] text-white border-[#6d28d9]",
-            accentRing: "ring-purple-500/30",
-            avatarBg: "bg-gradient-to-tr from-[#7c3aed] via-[#6d28d9] to-[#ec4899]",
-            idCode: "ATLAS-2026-SK03",
-            initials: "SK",
-            description: "Interface Architecture & Analytics and Research. Crafted the Minimal Cool Mint SaaS visual language, interactive 2D timetable studio, automated conflict diagnostics, real-time validation scoring reports, and user research.",
-            skills: ["Design Systems", "2D Matrix Studio", "Analytics & Insights", "UX Research"],
-            isLead: false,
-        }
-    ];
+    const transition = reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
 
     return createPortal(
-        <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-md animate-in fade-in duration-150"
-            onClick={onClose}
+        <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#0c2723]/40 p-3 backdrop-blur-md sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+            onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+            role="presentation"
         >
-            <div 
-                className="bg-white rounded-3xl border border-[#b8ccc8] shadow-2xl max-w-5xl w-full p-6 sm:p-7 space-y-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
+            <motion.section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="team-dialog-title"
+                initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.985 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.99 }}
+                transition={transition}
+                className="my-auto flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/80 bg-[#fbfcfb] shadow-[0_36px_100px_-38px_rgba(8,38,33,0.55)]"
             >
-                {/* Modal Header */}
-                <div className="flex items-start justify-between gap-4 border-b border-[#e2e8f0] pb-4 shrink-0">
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-2xl bg-[#ccfbf1] border border-[#99f6e4] flex items-center justify-center text-[#0d9488] shadow-xs">
-                            <ShieldCheck className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-extrabold text-[#0f172a] tracking-tight">
-                                    ATLAS Core Engineering Team
-                                </h3>
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#ccfbf1] text-[#0f766e] border border-[#99f6e4]">
-                                    ACCESS PASS ID
-                                </span>
+                <header className="relative shrink-0 overflow-hidden border-b border-[#e6eeea] bg-white px-5 py-5 sm:px-8 sm:py-7">
+                            <div className="relative flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3.5">
+                            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eaf6f1] text-[#3730a3] ring-1 ring-inset ring-[#d4eae0]">
+                                <BookOpen className="h-5 w-5" />
                             </div>
-                            <p className="text-xs text-[#64748b] font-medium mt-0.5">
-                                Official project credentials & roles of the core 3 architects behind the ATLAS Academic Timetable Generator
-                            </p>
+                            <div>
+                                <p className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#0d8b7e]">The people behind ATLAS</p>
+                                <h2 id="team-dialog-title" className="text-lg font-extrabold tracking-[-0.035em] text-[#1e1b4b] sm:text-xl">Meet the team</h2>
+                                <p className="mt-1 max-w-lg text-xs leading-5 text-[#71817d]">A small team building better tools for academic scheduling.</p>
+                            </div>
                         </div>
+                        <motion.button
+                            type="button"
+                            onClick={onClose}
+                            whileHover={{ rotate: 90, backgroundColor: "#f1f6f3" }}
+                            whileTap={{ scale: 0.92 }}
+                            transition={{ duration: 0.18 }}
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#81918c] transition-colors hover:text-[#294943] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/40"
+                            aria-label="Close team dialog"
+                        ><X className="h-4 w-4" /></motion.button>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 text-[#94a3b8] hover:text-[#0f172a] transition-colors cursor-pointer"
-                        aria-label="Close Team Modal"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+                </header>
 
-                {/* ID Cards 3-Column Grid */}
-                <div className="overflow-y-auto pr-1 flex-1">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-3 pb-2">
-                        {teamMembers.map((member, idx) => (
-                            <div 
-                                key={idx}
-                                className="relative pt-4 flex flex-col"
+                <div className="overflow-y-auto px-5 py-5 sm:px-8 sm:py-7">
+                    <div className="grid gap-3.5 md:grid-cols-3">
+                        {teamMembers.map((member, index) => (
+                            <motion.article
+                                key={member.initials}
+                                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ ...transition, delay: reduceMotion ? 0 : index * 0.055 }}
+                                whileHover={reduceMotion ? undefined : { y: -3 }}
+                                className={`group relative flex min-h-[370px] flex-col overflow-hidden rounded-2xl border bg-[#fffefa] shadow-[0_5px_18px_-16px_rgba(20,57,51,0.35)] transition-shadow duration-200 hover:shadow-[0_16px_30px_-24px_rgba(20,57,51,0.32)] ${member.lead ? "border-[#bdcec5]" : "border-[#e2e7e1]"}`}
                             >
-                                {/* Physical Metallic Lanyard Clip & Punch Hole */}
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-                                    <div className="w-12 h-3.5 rounded-t-md bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 border border-slate-400/80 shadow-xs flex items-center justify-center">
-                                        <div className="w-6 h-1.5 rounded-full bg-slate-900/90 shadow-inner" />
+                                <div className="border-b border-[#e7e9df] bg-[#f4f3eb] px-4 py-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 text-[#566a61]">
+                                            <BookOpen className="h-3.5 w-3.5" />
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.14em]">ATLAS · Academic Timetabling</span>
+                                        </div>
+                                        <span className="font-mono text-[10px] font-semibold tabular-nums text-[#89948c]">0{index + 1}</span>
                                     </div>
                                 </div>
 
-                                {/* Vertical ID Card Badge Body */}
-                                <div className={`relative rounded-3xl bg-white border border-[#b8ccc8]/80 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col justify-between hover:-translate-y-1.5 ring-1 ${member.accentRing} flex-1`}>
-                                    {/* Top Card Security Strip */}
-                                    <div className="px-5 pt-5 pb-3 bg-gradient-to-b from-[#f8fafb] to-white border-b border-[#f1f5f9]">
-                                        <div className="flex items-center justify-between">
-                                            {/* Micro EMV Smart Chip */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-5 rounded-md bg-gradient-to-br from-amber-200 via-amber-300 to-amber-400 border border-amber-500/60 shadow-2xs relative flex items-center justify-center overflow-hidden">
-                                                    <div className="w-2.5 h-full border-x border-amber-700/20" />
-                                                    <div className="h-1.5 w-full border-y border-amber-700/20 absolute" />
-                                                </div>
-                                                <span className="text-[9px] font-mono font-bold tracking-wider text-[#94a3b8] uppercase">
-                                                    ATLAS R&D
-                                                </span>
+                                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="relative grid h-[58px] w-[58px] shrink-0 place-items-center border border-[#d6ddd3] bg-[#f7f7f1] font-serif text-lg font-bold tracking-[-0.06em] text-[#315d50]">
+                                                <span>{member.initials}</span>
+                                                <span className="absolute bottom-1 left-1 right-1 h-px bg-[#ccd6cd]" />
                                             </div>
-
-                                            {/* Clearance Badge */}
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide uppercase border shadow-2xs ${member.badgeColor}`}>
-                                                {member.badge}
-                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="mb-1 text-[8px] font-bold uppercase tracking-[0.14em] text-[#89948c]">Project team</p>
+                                                <h3 className="font-serif text-[17px] font-bold leading-tight tracking-[-0.025em] text-[#203f35]">{member.name}</h3>
+                                            </div>
                                         </div>
 
-                                        <div className="mt-2 flex items-center justify-between text-[9px] font-mono text-[#64748b]">
-                                            <span className="font-semibold">{member.clearance}</span>
-                                            <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                VERIFIED
-                                            </span>
+                                        <div className="shrink-0 pt-0.5" aria-hidden="true">
+                                            <p className="mb-1.5 text-center font-mono text-[7px] font-semibold tracking-[0.1em] text-[#9aa299]">WEEK</p>
+                                            <div className="grid grid-cols-5 gap-[3px]">
+                                                {Array.from({ length: 20 }, (_, cell) => (
+                                                    <span key={cell} className={`h-[7px] w-[8px] border ${member.scheduleMark.includes(cell) ? "border-[#668777] bg-[#668777]" : "border-[#dce1d8] bg-[#fbfbf8]"}`} />
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Portrait & Identity Block */}
-                                    <div className="p-5 space-y-3.5 flex-1 flex flex-col">
-                                        {/* Avatar with Security Crosshairs */}
-                                        <div className="flex items-start gap-3.5">
-                                            <div className="relative p-1 rounded-2xl bg-white border border-[#e2e8f0] shadow-xs shrink-0">
-                                                {/* Corner Bracket Marks */}
-                                                <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-[#0d9488]" />
-                                                <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-[#0d9488]" />
-                                                <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-[#0d9488]" />
-                                                <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-[#0d9488]" />
-
-                                                <div className={`w-13 h-13 rounded-xl ${member.avatarBg} text-white font-black text-base flex items-center justify-center shadow-inner tracking-wider`}>
-                                                    {member.initials}
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-0.5">
-                                                <h4 className="text-base font-extrabold text-[#0f172a] leading-tight">
-                                                    {member.name}
-                                                </h4>
-                                                <p className="text-xs font-bold text-[#0f766e]">
-                                                    {member.role}
-                                                </p>
-                                                {member.subRole && (
-                                                    <p className="text-[11px] font-semibold text-[#0284c7] leading-tight">
-                                                        {member.subRole}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Description */}
-                                        <p className="text-xs text-[#475569] leading-relaxed font-normal flex-1">
-                                            {member.description}
-                                        </p>
-
-                                        {/* Competency Tags */}
-                                        <div className="flex flex-wrap gap-1.5 pt-1">
-                                            {member.skills.map((skill, sIdx) => (
-                                                <span 
-                                                    key={sIdx} 
-                                                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#f0fdf9] text-[#0f766e] border border-[#ccfbf1]"
-                                                >
-                                                    {skill}
-                                                </span>
-                                            ))}
-                                        </div>
+                                    <div className="mt-4 border-l-2 border-[#8eae99] pl-3">
+                                        <p className="text-[11px] font-bold leading-[1.55] text-[#315d50]">{member.role}</p>
+                                        <p className="mt-1 text-[10px] font-medium text-[#829087]">{member.subRole}</p>
                                     </div>
 
-                                    {/* Bottom Security Barcode & Card Serial */}
-                                    <div className="p-3.5 bg-[#f8fafb] border-t border-[#e2e8f0] flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <div className="text-[9px] font-mono uppercase tracking-wider text-[#94a3b8]">
-                                                Credential ID
-                                            </div>
-                                            <div className="text-xs font-mono font-extrabold text-[#0f172a]">
-                                                {member.idCode}
-                                            </div>
-                                        </div>
+                                    <p className="mt-4 flex-1 text-[11px] leading-[1.75] text-[#66736b]">{member.description}</p>
 
-                                        {/* Stylized Barcode */}
-                                        <div className="flex items-center gap-[2px] h-5 px-1.5 py-0.5 bg-white rounded border border-[#e2e8f0] shadow-2xs" aria-label="Security barcode">
-                                            {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 3].map((w, bIdx) => (
-                                                <span 
-                                                    key={bIdx} 
-                                                    className="h-full bg-slate-800 rounded-2xs inline-block"
-                                                    style={{ width: `${w}px` }}
-                                                />
+                                    <div className="mt-4 border-t border-[#e7e9df] pt-3">
+                                        <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.14em] text-[#89948c]">Contribution areas</p>
+                                        <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                                            {member.skills.map((skill) => (
+                                                <li key={skill} className="flex min-w-0 items-start gap-1.5 text-[9px] font-medium leading-4 text-[#52675c]"><span className="mt-[5px] h-1 w-1 shrink-0 bg-[#739381]" /><span>{skill}</span></li>
                                             ))}
-                                        </div>
+                                        </ul>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.article>
                         ))}
                     </div>
                 </div>
 
-                {/* Footer Notes & Close */}
-                <div className="pt-3 border-t border-[#e2e8f0] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-1.5 text-xs text-[#64748b] font-medium">
-                        <span>Crafted with</span>
-                        <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-                        <span>for Academic Institutions • ATLAS v5.5</span>
-                    </div>
-                    <button
+                <footer className="flex shrink-0 flex-col gap-3 border-t border-[#e7eeeb] bg-white/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                    <p className="flex items-center gap-1.5 text-[11px] font-medium text-[#879791]">Built for academic institutions, with <Heart className="h-3 w-3 fill-[#e47777] text-[#e47777]" /> by ATLAS.</p>
+                    <motion.button
+                        type="button"
                         onClick={onClose}
-                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-extrabold text-xs transition-all shadow-xs hover:shadow-md cursor-pointer"
-                    >
-                        Close Team Access Pass
-                    </button>
-                </div>
-            </div>
-        </div>,
+                        whileHover={{ y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1e1b4b] px-4 text-xs font-bold text-white transition-colors hover:bg-[#3730a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338ca]/50 focus-visible:ring-offset-2"
+                    >Close</motion.button>
+                </footer>
+            </motion.section>
+        </motion.div>,
         document.body
     );
 }

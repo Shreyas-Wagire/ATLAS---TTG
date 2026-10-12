@@ -34,6 +34,7 @@ export function parseLoadSheet(rows) {
 
     let currentYear = "";
     let currentBatchColOffset = 7; // default: col 8 for Batch 1 (offset 7 + 1 = 8)
+    let currentDivisions = ["A", "B", "C"];
 
     rows.forEach((row) => {
         const courseName = String(row[baseCol] || "").trim();
@@ -43,6 +44,10 @@ export function parseLoadSheet(rows) {
         const normalizedYear = normalizeYearHeader(courseName);
         if (normalizedYear) {
             currentYear = normalizedYear;
+            const sectionDivisions = ["A", "B", "C"].filter((division, index) =>
+                String(row[baseCol + 4 + index] || "").trim().toUpperCase() === division
+            );
+            currentDivisions = sectionDivisions.length ? sectionDivisions : ["A", "B", "C"];
             // Scan for column containing "1" to detect batch column start dynamically
             currentBatchColOffset = baseCol + 7;
             for (let c = baseCol + 4; c < row.length; c++) {
@@ -74,21 +79,25 @@ export function parseLoadSheet(rows) {
             !isNaN(Number(lValStr))
         ) {
 
-            const facultyA =
-                String(row[baseCol + 4] || "").trim();
-
-            const facultyB =
-                String(row[baseCol + 5] || "").trim();
-
-            const facultyC =
-                String(row[baseCol + 6] || "").trim();
+            const rawDivisions = {
+                A: String(row[baseCol + 4] || "").trim(),
+                B: String(row[baseCol + 5] || "").trim(),
+                C: String(row[baseCol + 6] || "").trim(),
+            };
+            const unavailableDivisions = Object.entries(rawDivisions)
+                .filter(([, faculty]) => faculty.toUpperCase() === "N/A")
+                .map(([division]) => division);
+            const cleanFaculty = (faculty) => faculty.toUpperCase() === "N/A" ? "" : faculty;
+            const facultyA = cleanFaculty(rawDivisions.A);
+            const facultyB = cleanFaculty(rawDivisions.B);
+            const facultyC = cleanFaculty(rawDivisions.C);
 
             const maxBatches = currentYear === "BTECH" ? 8 : 12;
             const batches = {};
             for (let b = 1; b <= maxBatches; b++) {
                 const colIdx = currentBatchColOffset + b;
                 const batchFaculty = String(row[colIdx] || "").trim();
-                if (batchFaculty && batchFaculty !== "-") {
+                if (batchFaculty && batchFaculty !== "-" && batchFaculty.toUpperCase() !== "N/A") {
                     batches[b] = batchFaculty;
                 }
             }
@@ -107,6 +116,8 @@ export function parseLoadSheet(rows) {
                     B: facultyB,
                     C: facultyC,
                 },
+                divisionApplicability: [...currentDivisions],
+                unavailableDivisions,
 
                 batches,
             });
